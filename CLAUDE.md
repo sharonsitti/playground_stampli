@@ -1,10 +1,14 @@
 # Playground — coding-interview pairing repo
 
-A React frontend used as a pairing surface for technical interviews. Keep changes minimal, demonstrative, and easy to read.
+A full-stack app (Express backend + React frontend) used as a pairing surface for technical interviews. Keep changes minimal, demonstrative, and easy to read.
 
 ## Layout
 
 ```
+server/                Node.js/Express backend
+  src/index.ts         Entry point — routes live here
+  package.json
+  tsconfig.json
 app/                   React frontend
   src/App.tsx          Root component
   src/components/ui/   shadcn/ui primitives (button, card, dialog, input)
@@ -25,6 +29,9 @@ Makefile               Single entry point for dev, install, lint, type, test
 
 | Layer | Tech |
 |---|---|
+| Backend language | Node.js 22, TypeScript 5 |
+| Backend framework | Express 5 |
+| Backend dev runner | tsx (watch mode, no build step) |
 | Frontend language | TypeScript 6, React 19, Vite 8 |
 | Frontend styling | Tailwind CSS v4 (via @tailwindcss/vite), tw-animate-css |
 | Frontend components | shadcn/ui (Base UI primitives + CVA + clsx + tailwind-merge) |
@@ -44,14 +51,16 @@ Run from repo root.
 
 | Command | What it does |
 |---|---|
-| `make install` | Install client deps + git hook |
-| `make dev` | Start the frontend dev server (web :3000) |
+| `make install` | Install all deps (frontend + API) + git hook |
+| `make dev` | Start both dev servers in parallel (:3000 frontend, :8000 API) |
 | `make check` | Lint + typecheck + test the frontend |
 | `make client-check` | Same as check |
 | `make client-test` | Tests only |
 | `make client-lint` | Lint only |
 | `make client-typecheck` | Type-check only |
 | `make client-build` | Production build of the frontend |
+| `make server-install` | Install server deps only |
+| `make server-dev` | Start the server dev server only |
 
 CI mirrors `make check` — if it passes locally, PRs go green.
 

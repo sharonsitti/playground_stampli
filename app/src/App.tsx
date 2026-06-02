@@ -122,8 +122,8 @@ function BentoGrid() {
               className="size-2 rounded-full"
               style={{
                 backgroundColor: dot.highlighted
-                  ? 'oklch(0.62 0.19 28 / 0.75)'
-                  : 'oklch(0.87 0.018 72)',
+                  ? 'oklch(0.52 0.22 272 / 0.75)'
+                  : 'oklch(0.91 0.01 272)',
               }}
             />
           ))}
@@ -142,9 +142,7 @@ export default function App() {
           <div className="flex h-14 items-center justify-between">
             <div className="flex items-center gap-2">
               <Command className="text-primary size-4" />
-              <span className="font-heading text-base font-semibold tracking-tight">
-                Legion Security
-              </span>
+              <span className="font-heading text-base font-semibold tracking-tight">Stampli</span>
             </div>
             <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
               <a
@@ -290,18 +288,13 @@ export default function App() {
             <Card className="col-span-12 lg:col-span-7">
               <CardHeader>
                 <CardTitle>Typography</CardTitle>
-                <CardDescription>Fraunces display · Figtree body</CardDescription>
+                <CardDescription>Plus Jakarta Sans display · Inter body</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-5 pt-2">
                   <div>
-                    <span className="text-muted-foreground mb-1 block text-xs">
-                      Display / 5xl · opsz 144
-                    </span>
-                    <p
-                      className="font-heading text-5xl leading-none font-semibold tracking-tight"
-                      style={{ fontVariationSettings: '"opsz" 144' }}
-                    >
+                    <span className="text-muted-foreground mb-1 block text-xs">Display / 5xl</span>
+                    <p className="font-heading text-5xl leading-none font-semibold tracking-tight">
                       Aa
                     </p>
                   </div>
@@ -331,7 +324,7 @@ export default function App() {
               <Card>
                 <CardHeader>
                   <CardTitle>Palette</CardTitle>
-                  <CardDescription>Warm dark · amber accent</CardDescription>
+                  <CardDescription>Clean light · purple accent</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-5 gap-2 pt-2">
@@ -379,7 +372,7 @@ export default function App() {
           <div className="text-muted-foreground flex flex-col items-center justify-between gap-4 text-sm md:flex-row">
             <div className="flex items-center gap-2">
               <Command className="text-primary size-3.5" />
-              <span className="font-heading text-foreground font-medium">Legion Security</span>
+              <span className="font-heading text-foreground font-medium">Stampli</span>
             </div>
             <p>A design foundation for remarkable products.</p>
             <p>© 2026</p>
