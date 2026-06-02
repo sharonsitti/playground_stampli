@@ -1,0 +1,4 @@
+#!/bin/sh
+# Runs `make client-check` (lint + typecheck + test) before allowing a commit.
+# Bypass for genuine emergencies with `git commit --no-verify`.
+exec make client-check

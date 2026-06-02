@@ -1,0 +1,224 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+ * Design tokens — edit these to retune the whole UI.
+ * Everything downstream (shadcn slots, tailwind theme, utility classes)
+ * resolves back to a token here, so changing a base ripples everywhere.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Warm light surfaces (hue 80) — parchment → raised card → border ramp */
+  --surface-base: oklch(0.97 0.016 82);
+  --surface-sidebar: oklch(0.95 0.016 82);
+  --surface-raised: oklch(0.985 0.006 80);
+  --surface-muted: oklch(0.93 0.016 80);
+  --surface-elevated: oklch(0.95 0.014 80);
+  --surface-border: oklch(0.87 0.018 72);
+  --surface-scroll: oklch(0.75 0.015 68);
+
+  /* Ink — deep warm brown on light surfaces */
+  --ink: oklch(0.17 0.022 68);
+  --ink-muted: oklch(0.5 0.018 62);
+
+  /* Coral accent (hue 28) — primary actions, focus rings, chart-1 */
+  --accent: oklch(0.62 0.19 28);
+  --accent-ink: oklch(0.99 0 0); /* white on coral */
+
+  /* Status */
+  --status-destructive: oklch(0.5 0.22 22);
+
+  /* Chart ramp — coral → deep warm */
+  --chart-1: var(--accent);
+  --chart-2: oklch(0.55 0.15 35);
+  --chart-3: oklch(0.48 0.12 42);
+  --chart-4: oklch(0.42 0.09 50);
+  --chart-5: oklch(0.36 0.06 58);
+
+  /* Motion + shape */
+  --ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --radius: 0.75rem;
+
+  /* ----------------------------------------------------------------------
+   * shadcn slot vars — map the slots shadcn components expect to our base
+   * tokens above. Don't edit these directly; edit a base token instead.
+   * -------------------------------------------------------------------- */
+  --background: var(--surface-base);
+  --foreground: var(--ink);
+  --card: var(--surface-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-ink);
+  --secondary: var(--surface-elevated);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--ink-muted);
+  --accent-foreground: var(--accent-ink);
+  --destructive: var(--status-destructive);
+  --border: var(--surface-border);
+  --input: var(--surface-border);
+  --ring: var(--accent);
+  --sidebar: var(--surface-sidebar);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--accent-ink);
+  --sidebar-accent: var(--surface-elevated);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--surface-border);
+  --sidebar-ring: var(--accent);
+}
+
+/* ---------------------------------------------------------------------------
+ * Tailwind theme bindings — exposes our tokens as utility classes
+ * (bg-card, text-foreground, ring-ring, font-heading, rounded-xl, …).
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  /* Typography */
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-sans: 'Figtree', system-ui, sans-serif;
+
+  /* Surface colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Radius ramp — all scale with --radius */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ---------------------------------------------------------------------------
+ * Global base
+ * ------------------------------------------------------------------------- */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Film-grain overlay — fixed, full-viewport, non-interactive, sits above
+   * everything at 3.5% opacity to add print-like texture without affecting
+   * legibility. The SVG is an inline fractal-noise filter. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 180px 180px;
+  }
+
+  /* Slim accent scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--surface-scroll);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(from var(--accent) l c h / 0.6);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Reveal animations — used on hero copy and bento cards.
+ * ------------------------------------------------------------------------- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-reveal {
+  animation: fade-up 0.9s var(--ease-soft) both;
+}
+
+.bento-reveal {
+  animation: fade-in 0.8s var(--ease-soft) both;
+}
+
+/* ---------------------------------------------------------------------------
+ * Decorative section background — two soft corner glows (coral top-right,
+ * warm tan bottom-left) over a faint dot grid. Hero-only.
+ * ------------------------------------------------------------------------- */
+.mesh-bg {
+  background-image:
+    radial-gradient(
+      ellipse 65% 45% at 88% 8%,
+      oklch(from var(--accent) l c h / 0.08) 0%,
+      transparent 65%
+    ),
+    radial-gradient(ellipse 45% 35% at 12% 88%, oklch(0.75 0.06 60 / 0.15) 0%, transparent 60%),
+    radial-gradient(circle, oklch(0.87 0.018 72) 1px, transparent 1px);
+  background-size:
+    auto,
+    auto,
+    28px 28px;
+}
