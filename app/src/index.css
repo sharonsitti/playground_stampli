@@ -10,32 +10,32 @@
  * resolves back to a token here, so changing a base ripples everywhere.
  * ------------------------------------------------------------------------- */
 :root {
-  /* Warm light surfaces (hue 80) — parchment → raised card → border ramp */
-  --surface-base: oklch(0.97 0.016 82);
-  --surface-sidebar: oklch(0.95 0.016 82);
-  --surface-raised: oklch(0.985 0.006 80);
-  --surface-muted: oklch(0.93 0.016 80);
-  --surface-elevated: oklch(0.95 0.014 80);
-  --surface-border: oklch(0.87 0.018 72);
-  --surface-scroll: oklch(0.75 0.015 68);
+  /* Clean light surfaces (hue 272) — white → light lavender → border ramp */
+  --surface-base: oklch(0.99 0.003 272);
+  --surface-sidebar: oklch(0.97 0.006 272);
+  --surface-raised: oklch(1 0 0);
+  --surface-muted: oklch(0.96 0.008 272);
+  --surface-elevated: oklch(0.97 0.006 272);
+  --surface-border: oklch(0.91 0.01 272);
+  --surface-scroll: oklch(0.78 0.012 272);
 
-  /* Ink — deep warm brown on light surfaces */
-  --ink: oklch(0.17 0.022 68);
-  --ink-muted: oklch(0.5 0.018 62);
+  /* Ink — deep cool near-black on light surfaces */
+  --ink: oklch(0.16 0.02 272);
+  --ink-muted: oklch(0.48 0.015 272);
 
-  /* Coral accent (hue 28) — primary actions, focus rings, chart-1 */
-  --accent: oklch(0.62 0.19 28);
-  --accent-ink: oklch(0.99 0 0); /* white on coral */
+  /* Stampli purple (hue 272) — primary actions, focus rings, chart-1 */
+  --accent: oklch(0.52 0.22 272);
+  --accent-ink: oklch(0.99 0 0); /* white on purple */
 
   /* Status */
   --status-destructive: oklch(0.5 0.22 22);
 
-  /* Chart ramp — coral → deep warm */
+  /* Chart ramp — purple → deep violet */
   --chart-1: var(--accent);
-  --chart-2: oklch(0.55 0.15 35);
-  --chart-3: oklch(0.48 0.12 42);
-  --chart-4: oklch(0.42 0.09 50);
-  --chart-5: oklch(0.36 0.06 58);
+  --chart-2: oklch(0.47 0.19 272);
+  --chart-3: oklch(0.42 0.16 272);
+  --chart-4: oklch(0.37 0.13 272);
+  --chart-5: oklch(0.32 0.1 272);
 
   /* Motion + shape */
   --ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
@@ -78,8 +78,8 @@
  * ------------------------------------------------------------------------- */
 @theme inline {
   /* Typography */
-  --font-heading: 'Fraunces', Georgia, serif;
-  --font-sans: 'Figtree', system-ui, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
 
   /* Surface colors */
   --color-background: var(--background);
@@ -205,18 +205,18 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Decorative section background — two soft corner glows (coral top-right,
- * warm tan bottom-left) over a faint dot grid. Hero-only.
+ * Decorative section background — two soft corner glows (purple top-right,
+ * cool lavender bottom-left) over a faint dot grid. Hero-only.
  * ------------------------------------------------------------------------- */
 .mesh-bg {
   background-image:
     radial-gradient(
       ellipse 65% 45% at 88% 8%,
-      oklch(from var(--accent) l c h / 0.08) 0%,
+      oklch(from var(--accent) l c h / 0.1) 0%,
       transparent 65%
     ),
-    radial-gradient(ellipse 45% 35% at 12% 88%, oklch(0.75 0.06 60 / 0.15) 0%, transparent 60%),
-    radial-gradient(circle, oklch(0.87 0.018 72) 1px, transparent 1px);
+    radial-gradient(ellipse 45% 35% at 12% 88%, oklch(0.75 0.08 272 / 0.1) 0%, transparent 60%),
+    radial-gradient(circle, oklch(0.91 0.01 272) 1px, transparent 1px);
   background-size:
     auto,
     auto,

@@ -1,10 +1,14 @@
 # Playground — coding-interview pairing repo
 
-A React frontend used as a pairing surface for technical interviews. Keep changes minimal, demonstrative, and easy to read.
+A full-stack app (Express backend + React frontend) used as a pairing surface for technical interviews. Keep changes minimal, demonstrative, and easy to read.
 
 ## Layout
 
 ```
+server/                Node.js/Express backend
+  src/index.ts         Entry point — routes live here
+  package.json
+  tsconfig.json
 app/                   React frontend
   src/App.tsx          Root component
   src/components/ui/   shadcn/ui primitives (button, card, dialog, input)
@@ -25,6 +29,9 @@ Makefile               Single entry point for dev, install, lint, type, test
 
 | Layer | Tech |
 |---|---|
+| Backend language | Node.js 22, TypeScript 5 |
+| Backend framework | Express 5 |
+| Backend dev runner | tsx (watch mode, no build step) |
 | Frontend language | TypeScript 6, React 19, Vite 8 |
 | Frontend styling | Tailwind CSS v4 (via @tailwindcss/vite), tw-animate-css |
 | Frontend components | shadcn/ui (Base UI primitives + CVA + clsx + tailwind-merge) |
@@ -44,18 +51,24 @@ Run from repo root.
 
 | Command | What it does |
 |---|---|
-| `make install` | Install client deps + git hook |
-| `make dev` | Start the frontend dev server (web :3000) |
-| `make check` | Lint + typecheck + test the frontend |
-| `make client-check` | Same as check |
-| `make client-test` | Tests only |
-| `make client-lint` | Lint only |
-| `make client-typecheck` | Type-check only |
+| `make install` | Install all deps (frontend + server) + git hook |
+| `make dev` | Start both dev servers in parallel (:3000 frontend, :8000 server) |
+| `make check` | Lint + typecheck + test both frontend and server |
+| `make client-check` | Lint + typecheck + test the frontend only |
+| `make client-test` | Frontend tests only |
+| `make client-lint` | Frontend lint only |
+| `make client-typecheck` | Frontend type-check only |
 | `make client-build` | Production build of the frontend |
+| `make server-check` | Lint + typecheck + test the server only |
+| `make server-test` | Server tests only |
+| `make server-lint` | Server lint only |
+| `make server-typecheck` | Server type-check only |
+| `make server-install` | Install server deps only |
+| `make server-dev` | Start the server dev server only |
 
-CI mirrors `make check` — if it passes locally, PRs go green.
+CI runs `make client-check` only (server has no CI — local playground only).
 
-A git `pre-commit` hook in [.githooks/](./.githooks/) runs `make client-check` before every commit. `make install` (or `make install-hooks` standalone) points `core.hooksPath` at that directory. Bypass with `git commit --no-verify` only for genuine emergencies.
+A git `pre-commit` hook in [.githooks/](./.githooks/) runs `make check` (both sides) before every commit. `make install` (or `make install-hooks` standalone) points `core.hooksPath` at that directory. Bypass with `git commit --no-verify` only for genuine emergencies.
 
 ## Harness — hooks, permissions, plugins
 
@@ -64,6 +77,10 @@ A git `pre-commit` hook in [.githooks/](./.githooks/) runs `make client-check` b
 **`.claude/hooks/frontend-check.sh`** — fires on `.ts`, `.tsx`, `.css` files under `app/`:
 1. Auto-fixes: `eslint --fix` + `prettier --write` (never blocks)
 2. Blocks and surfaces errors to Claude on `tsc -b --noEmit` failure (exit 2) for TS/TSX files
+
+**`.claude/hooks/server-check.sh`** — fires on `.ts` files under `server/`:
+1. Auto-fixes: `eslint --fix` + `prettier --write` (never blocks)
+2. Blocks and surfaces errors to Claude on `tsc --noEmit` failure (exit 2)
 
 ### Allowed permissions (`.claude/settings.json`)
 
