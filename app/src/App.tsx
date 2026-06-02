@@ -144,16 +144,6 @@ export default function App() {
               <Command className="text-primary size-4" />
               <span className="font-heading text-base font-semibold tracking-tight">Stampli</span>
             </div>
-            <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
-              <a
-                href="http://localhost:8000/docs"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground transition-colors duration-150"
-              >
-                Docs
-              </a>
-            </nav>
             <Button size="sm">
               Get started
               <ArrowRight className="ml-1 size-3" />
