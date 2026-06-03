@@ -17,7 +17,7 @@ app/                   React frontend
   vite.config.ts       Vite + Tailwind CSS v4 config
 docs/                  Product/technical context — source of truth for behavior
 .claude/
-  skills/              Project-local Claude skills (spec, dev, add-tests, make-pr)
+  skills/              Project-local Claude skills (dev, add-tests, make-pr)
   hooks/               PostToolUse hooks (frontend-check.sh)
   settings.json        Permissions, hooks, enabled plugins
 .github/               CI workflows (client-ci on every PR)
@@ -91,7 +91,6 @@ Pre-approved without a prompt:
 - `Bash(git mv *)`, `Bash(git check-ignore *)`
 - `mcp__plugin_context7_context7__resolve-library-id`
 - `mcp__plugin_context7_context7__query-docs`
-- `Edit(/.claude/skills/spec/**)`
 
 ### Enabled plugins / MCPs
 
@@ -106,7 +105,6 @@ Pre-approved without a prompt:
 
 Project-local skills live in `.claude/skills/`. Invoke when the user's request matches the trigger:
 
-- **`spec`** — authors `docs/feat-<name>.md`: goal, problem, personas, ranked requirements with measurable acceptance criteria, workflows, PR plan, risks. Use for "spec X", "/spec", "write the spec for...". Asks at most 3 critical clarifying questions, then drafts; any remaining unknowns become an "Open questions" section in the doc.
 - **`dev`** — engineering fundamentals for non-trivial code changes: clean code, SOLID, DRY, decoupling, componentization, KISS, no bloat. Use for "/dev", "implement X", "refactor X". Plans against `docs/` + `CLAUDE.md` before writing; never touches tests (that's `add-tests`).
 - **`add-tests`** — writes unit/integration tests **driven by `docs/`**, not the implementation. Use for "add tests", "/add-tests", "write tests for X". Proposes ranked happy/unhappy checks first and waits for confirmation before writing code. Refuses to proceed if `docs/` is silent on the feature.
 - **`make-pr`** — opens or refreshes a GitHub PR for the current branch via `gh`. Use for "make a PR", "/make-pr", "update the PR". Pushes the branch and submits without further confirmation.
