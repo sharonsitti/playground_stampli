@@ -1,4 +1,3 @@
-import BattleshipMockup from '@/components/BattleshipMockup'
 import { ArrowRight, BarChart3, Command, MessageSquare, Sparkles, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -135,7 +134,6 @@ function BentoGrid() {
 }
 
 export default function App() {
-  return <BattleshipMockup />
   return (
     <div className="bg-background text-foreground relative min-h-screen overflow-x-hidden">
       {/* Navigation */}

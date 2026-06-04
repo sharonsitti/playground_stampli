@@ -5,24 +5,24 @@
 A two-player Battleship game playable across two browser tabs on the same machine. Players register with a name, find each other in a lobby, place their fleets under a countdown, then alternate firing shots until one fleet is destroyed. All real-time state is pushed via SSE; no page reloads required after the initial load.
 
 
-## Out of Scope
-
-- Authentication, passwords, or sessions beyond a name entry
-- Spectator mode
-- Chat or emotes
-- More than two players per game
-- AI / single-player mode
-
 ## Assumptions
 
 - Both players are on the same machine using the same localhost server
-- Desktop only; no mobile or responsive layout required
 - The placement timer and per-turn timer use the same preset value
 
 ## Target Personas
 
 - **Player A (game creator):** Opens the app, enters their name, creates a game with a difficulty preset, and waits in the lobby for an opponent.
 - **Player B (joiner):** Opens the app in a second tab, enters their name, sees Player A's open game in the lobby list, and joins it.
+
+## Out of Scope
+
+If it is not explicitly described in the requirements or UI mockup, it is out of scope. Do not infer intent or add features that seem natural but are unspecified. Common patterns to avoid:
+
+- **Production readiness:** observability, logging, rate limiting, authentication or sessions beyond a name entry, deployment infrastructure
+- **UI polish:** animations, mobile / responsive layout, undo beyond the Reset button, loading skeletons
+- **Interaction patterns:** drag-and-drop for ship placement (F4 specifies click-only); keyboard shortcuts beyond `R` for rotation
+- **SSE behaviour:** auto-reconnects, retries. 
 
 ---
 
@@ -34,10 +34,10 @@ A two-player Battleship game playable across two browser tabs on the same machin
 As a new visitor, I want to enter my name before entering the lobby so that my identity and stats are tracked across games.
 
 **Acceptance criteria:**
-1. The welcome screen is shown every time the app is opened
+1. The welcome screen is shown every time the app is opened, even if a prior session id exists in storage — no skip or auto-redirect
 2. The welcome screen has a single text input for name and a "Play" button
 3. "Play" is disabled until at least 1 non-whitespace character is entered
-4. Submitting creates or retrieves the player record on the server
+4. Submitting creates or retrieves the player record on the server; the returned `id` and `name` are stored in `sessionStorage` (not `localStorage` — each tab must hold an independent identity)
 5. After submit, the player is taken to the lobby
 
 #### F2 — Lobby: game list
@@ -68,12 +68,20 @@ As a player, I want to arrange my fleet on the grid using click interactions so 
 | Submarine | 3 cells |
 | Destroyer | 2 cells |
 
+**How to place ships:**
+1. **Select** — Click a ship in the palette. It attaches to your cursor as a ghost preview.
+2. **Position** — Hover over the grid. The preview snaps cell-by-cell, anchored from the ship's top-left corner. Green = valid placement; red = invalid.
+3. **Rotate** — Press `R` at any time to toggle between horizontal and vertical. The preview updates instantly and validity re-evaluates.
+4. **Place** — Click a cell to place the ship. Invalid positions are blocked. The ship is removed from the palette.
+5. **Reposition** — Click a placed ship on the grid to pick it back up, as if selecting it from the palette again.
+6. **Reset** — Click "Reset" to remove all placed ships and refill the palette.
+
 **Acceptance criteria:**
 1. The fleet grid is 10×10; columns are labeled `a`–`j`, rows `1`–`10`. Column letters map to integers in the API: `a=0, b=1, …, j=9`; this encoding is used in all ship placement and shot endpoints.
 2. Clicking a ship in the palette selects it and shows a hover preview snapped to the grid, anchored from the ship's top-left cell
 3. Once a ship is placed, it is removed from the palette
-4. Valid placement = green highlight; invalid = red highlight (rules: H/V only, must fit in bounds, no overlap; ships may touch)
-5. Orientation can be toggled via a "Rotate" button in the palette or the `R` key; toggling updates the live preview immediately
+4. Valid placement = green highlight; invalid = red highlight (rules: H/V only, must fit in bounds, no overlap; ships may touch); clicking an invalid position is a no-op
+5. Orientation is toggled via the `R` key; toggling updates the live preview immediately
 6. Clicking an already-placed ship on the fleet grid picks it back up into the cursor
 7. A "Reset" button clears all placed ships and repopulates the palette
 
@@ -84,7 +92,7 @@ As a player, I want the placement phase to be time-limited and coordinated with 
 1. Both players enter the placement phase simultaneously when the second player joins
 2. A countdown timer (from the game's preset value) is visible and synchronized across both tabs
 3. The "I'm ready!" button is disabled until all 5 ships are placed
-4. Clicking "I'm ready!" locks placement, disables and visually highlights the button (no text change), and notifies the server
+4. Clicking "I'm ready!" locks placement, disables and visually highlights the button (no text change), and notifies the server; the Reset button and all grid cells are also disabled (not hidden)
 5. If both players click "I'm ready!" before the timer expires, the battle phase begins immediately
 6. If the timer expires before both players have clicked "I'm ready!", the game is terminated: no winner is recorded, both players are returned to the lobby with a dismissible message
 
@@ -136,6 +144,7 @@ Game and lobby state must be consistent across all open views at any point in ti
 **Acceptance criteria:**
 1. Actions submitted against a game state that has already advanced are rejected with a 409 Conflict response
 2. On receiving a 409, the client discards the response and takes no UI action; the correct state will arrive via the real-time stream
+3. The SSE stream is authoritative for game state; shot results and phase changes are applied only on SSE events, not on HTTP response bodies. The targeting grid is blocked for further clicks until `shot_fired` arrives
 
 #### NF2 — Latency: real-time updates
 State changes must be pushed to all open views as they occur, so that game events feel immediate and no player acts on outdated information.
@@ -152,6 +161,7 @@ The system must not crash or corrupt state from invalid or malformed input, so t
 2. Firing on an already-fired cell is rejected with a 400 response
 3. Acting out of turn is rejected with a 403 response
 4. Errors are returned in the envelope defined in NF4 and never crash the handler
+5. Handlers check conditions in this order: phase/status (→ 409), authorization/turn (→ 403), input validity (→ 400); the first failing check wins
 
 #### NF4 — Contract: uniform error envelope
 All endpoints must return errors in a consistent shape so the client can handle any failure without endpoint-specific parsing logic.
@@ -168,12 +178,12 @@ The server must reject actions that are invalid for the current game phase so th
 3. Calling any action endpoint on a `finished` game returns 409
 4. Calling `/join` on a game that is not `waiting` returns 409
 
-#### NF6 — Fault tolerance: connection loss
-If the real-time connection drops, the client must surface a visible error rather than silently presenting stale state, so a player is never stuck acting on outdated information.
+#### NF6 — Scale: single-machine localhost only
+This is a conceptual project intended to run on one machine; no concurrency, horizontal scaling, or production load targets apply, so simplicity always wins over optimization.
 
 **Acceptance criteria:**
-1. If the real-time connection is lost, the UI shows a non-dismissible banner: "Connection lost — please refresh"
-2. The client does not attempt to reconnect automatically
+1. The server is designed for exactly two concurrent players on a single localhost instance — no connection pooling, caching layers, or scalability patterns are required
+2. Where a simpler implementation and a more performant one diverge, always prefer the simpler one
 
 ---
 
@@ -205,6 +215,7 @@ Represents a single game instance from creation through completion; drives lobby
 
 **Notes:**
 - A game whose placement timer expires before both players are ready is marked `finished` with `winner_id: null`. No new status value is needed.
+- Placement-expiry games do not increment `games_played`, `wins`, or `losses` for either player; only games that reach `game_over` count.
 
 ---
 
@@ -235,7 +246,11 @@ Records every shot fired in a game; used to prevent duplicate shots and reconstr
 
 ### API Schemas
 
-One entry per endpoint. These are the interface contracts — the request and response shapes that backend commits to serve and frontend commits to consume. Both sides build against these independently.
+One entry per endpoint. These are the interface contracts — the request and response shapes that backend commits to serve and frontend commits to consume.
+
+All schemas are defined as **Zod schemas** in `shared/schemas.ts` and imported by both `server/` and `app/`. The inferred TypeScript types (`z.infer<typeof Schema>`) are the only types used on either side — no separate interface files. The server validates all incoming request bodies and outgoing response payloads against these schemas at runtime; a mismatch throws before the response is sent.
+
+`shared/schemas.ts` also exports `PRESET_SECONDS: Record<'quick'|'casual', number> = { quick: 30, casual: 60 }` — the only place this mapping is defined; no agent hardcodes these values elsewhere.
 
 All 4xx and 5xx responses return `{ "error": string }`.
 
@@ -371,7 +386,7 @@ Joins a `waiting` game, transitioning it to `placing`. Triggers the placement ph
 ---
 
 #### `GET /api/games/:gameId/events`
-SSE stream for all game-specific events during placement and battle phases. Both players connect on entering placement; the creator connects immediately after creating the game to receive `player_joined`.
+SSE stream for all game-specific events during placement and battle phases. Both players connect on entering placement; the creator connects immediately after creating the game to receive `player_joined`. When a client connects while the game is already in `placing` status, the server immediately replays the last `player_joined` event followed by the current `timer_tick` value, so the joiner never misses the initial state.
 
 **Response** — `text/event-stream`. Each message:
 ```
@@ -520,71 +535,81 @@ Fires a shot at the opponent's grid on the active player's turn. Server resolves
 ## Key User Flows
 
 ### Flow 1 — Player registration
-- **Purpose:** Establish player identity before entering the lobby
-- **Trigger:** User opens the app
+- **Purpose:** Establish a named player identity before entering the lobby so stats can be tracked across games.
+- **Trigger:** Player opens the app (Welcome screen is always shown on load).
 - **Walkthrough:**
-  1. Welcome screen renders with name input and disabled "Play" button
-  2. User types their name; "Play" enables
-  3. User submits → `POST /api/players` → server returns player record
-  4. User is routed to the lobby
-- **Architectural pattern:** Request/response — one-shot, no streaming needed
+  1. Welcome screen renders with a name input and a disabled "Play" button.
+  2. Player types at least one non-whitespace character; "Play" becomes enabled.
+  3. Player clicks "Play"; client sends `POST /api/players` with the trimmed name.
+  4. Server creates a new player record or returns the existing one for that name.
+  5. Client stores the returned `id` and navigates to the lobby.
+- **Architectural pattern:** Request/response — a single POST is sufficient; no streaming needed because there is no shared state to coordinate at this point.
 - **Supports:** F1, F9
 
-### Flow 2 — Lobby and game creation
-- **Purpose:** Two players find each other and start a game
-- **Trigger:** Player arrives in the lobby
-- **Walkthrough:**
-  1. Lobby fetches open games via `GET /api/games` on mount
-  2. Player A subscribes to `GET /api/lobby/events` (SSE)
-  3. Player A clicks "Create Game", selects Quick or Casual, confirms → `POST /api/games`
-  4. Player A sees "Waiting for opponent..." state
-  5. Player B arrives in a second tab, sees Player A's game in the list (pushed via `game_created` SSE event)
-  6. Player B clicks "Join" → `POST /api/games/:gameId/join`
-  7. Both tabs transition to the placement phase
-- **Architectural pattern:** SSE for lobby list updates; request/response for create/join actions
-- **Supports:** F2, F3
+---
 
-### Flow 3 — Ship placement
-- **Purpose:** Both players secretly arrange their fleets before battle
-- **Trigger:** Second player joins; both tabs receive `player_joined` SSE event
+### Flow 2 — Lobby: browse, create, and join a game
+- **Purpose:** Match two players together so a game can begin.
+- **Trigger:** Player lands on the lobby screen after registration.
 - **Walkthrough:**
-  1. Both tabs render the placement UI: fleet grid + ship palette + timer
-  2. Server starts the countdown and broadcasts `timer_tick` events every second via SSE
-  3. Each player places their 5 ships via click interactions; the server is not called until submission
-  4. When all 5 ships are placed, "I'm ready!" activates
-  5. Player clicks "I'm ready!" → `POST /api/games/:gameId/place` (ships) + `POST /api/games/:gameId/ready`
-  6. Button becomes disabled and highlighted; both tabs receive `player_ready` event
-  7. When both players are ready → server broadcasts `battle_start`; both tabs transition to battle phase
-  8. If timer reaches 0 before both are ready → server broadcasts `placement_expired`; both tabs show termination message and return to lobby
-- **Architectural pattern:** SSE for timer sync and readiness coordination; request/response for placement submission
-- **Supports:** F4, F5
+  1. Client fetches `GET /api/games` to populate the initial list of `waiting` games, then opens `GET /api/lobby/events` (SSE) to receive real-time updates.
+  2. **Player A — create:** Clicks "Create Game", selects a preset (Quick 30s / Casual 60s), confirms. Client sends `POST /api/games`; server creates the game in `waiting` status and broadcasts a `game_created` event to all lobby SSE subscribers. Player A enters a "Waiting for opponent…" holding state and opens `GET /api/games/:gameId/events` to receive the `player_joined` event when someone joins.
+  3. **Player B — join:** Sees Player A's game row (creator name, record, win rate, preset). Clicks "Join". Client sends `POST /api/games/:gameId/join`; server transitions the game to `placing` and broadcasts `game_removed` to all lobby SSE subscribers, removing the row from every connected lobby view.
+  4. Both players receive a response (Player A via SSE `player_joined`, Player B via the join response) and both navigate into the placement phase.
+- **Architectural pattern:** Hybrid — REST POST for mutations (create, join); SSE (`GET /api/lobby/events`) for real-time lobby list updates pushed to all connected clients without polling.
+- **Supports:** F2, F3, F9, NF1, NF2
 
-### Flow 4 — Battle phase
-- **Purpose:** Players alternate firing shots until one fleet is destroyed
-- **Trigger:** `battle_start` SSE event received by both tabs
+---
+
+### Flow 3 — Ship placement phase
+- **Purpose:** Both players secretly arrange their fleets on private grids before battle begins, within a shared time limit.
+- **Trigger:** `POST /api/games/:gameId/join` completes; server transitions game to `placing` and starts the placement countdown.
 - **Walkthrough:**
-  1. Both tabs render fleet grid (left) + targeting grid (right) + turn banner with countdown
-  2. Server starts the turn timer and broadcasts `timer_tick` events
-  3. Active player clicks a cell on their targeting grid → `POST /api/games/:gameId/shot`
-  4. Server validates the shot, updates board state, broadcasts `shot_fired` to both tabs
-  5. Both tabs update: targeting grid reflects hit/miss; fleet grid reflects incoming damage
-  6. If the shot sinks a ship, the ship's full outline is revealed on the targeting grid and a "[Ship] sunk!" notification is shown
-  7. Turn passes; server resets the timer and broadcasts the next `timer_tick` cycle
-  8. If the active player's timer expires → server broadcasts `turn_expired`; both tabs show "[Player] ran out of time — turn skipped"; turn passes
-  9. If all ships in one board are sunk → server broadcasts `game_over`; both tabs render the game-over screen
-- **Architectural pattern:** SSE for all state pushes; request/response for shot submission
-- **Supports:** F6, F7, F8
+  1. Server starts the placement timer and immediately sends the first `timer_tick` event on the game SSE stream; Player A receives `player_joined` (with `timer_seconds`) and Player B receives the same initial tick. Both tabs display the same countdown from the first tick onward.
+  2. Each player arranges ships entirely client-side, one ship at a time:
+      - Click a ship in the palette — it attaches to the cursor as a ghost preview.
+      - Move the cursor over the grid — the preview snaps cell-by-cell, anchored at the ship's top-left corner. It turns **green** if the position is valid (in-bounds, no overlap) or **red** if not.
+      - Press `R` at any point to toggle H/V orientation; the preview re-snaps and re-evaluates validity immediately.
+      - Click a **green** cell to place the ship — it is removed from the palette and drawn on the grid.
+      - Click a **red** cell — nothing happens; the ship stays on the cursor.
+      - Click an already-placed ship on the grid — it is picked back up into the cursor exactly as if freshly selected from the palette, and its slot returns to the palette.
+      - Click "Reset" — all placed ships are removed and the palette is fully repopulated.
+  3. Once all 5 ships are placed, "I'm ready!" becomes enabled.
+  4. Player clicks "I'm ready!": client sends `POST /api/games/:gameId/place` (full ship list), then `POST /api/games/:gameId/ready`. Server broadcasts `player_ready` to both players; the button is visually locked.
+  5. **Both ready before timer:** server transitions game to `battle`, broadcasts `battle_start` (with `current_turn` and `timer_seconds`). Both clients navigate to the battle phase.
+  6. **Timer expires first:** server broadcasts `placement_expired`; game is marked `finished` with no winner. Both clients display a dismissible message and return to the lobby.
+- **Architectural pattern:** Hybrid — placement interaction is fully client-side (no round-trips until submission, keeping UI instant); server drives the timer via `timer_tick` SSE events so both tabs stay synchronized; placement and ready state submitted via REST POST; phase transitions coordinated via SSE events on the game stream.
+- **Supports:** F4, F5, NF1, NF2, NF3, NF5
+
+---
+
+### Flow 4 — Battle phase: fire shots and track state
+- **Purpose:** Players alternate firing shots at each other's hidden fleets until one fleet is fully destroyed.
+- **Trigger:** `battle_start` SSE event received by both players.
+- **Walkthrough:**
+  1. Both clients render two grids side by side: fleet grid (own ships + incoming hits) on the left, targeting grid (shots fired at opponent) on the right. A banner shows "Your turn" or "Waiting for opponent…" with a live countdown from `timer_tick` events.
+  2. The game creator fires first (`current_turn` from `battle_start`). The targeting grid is non-interactive when it is not the player's turn.
+  3. Active player clicks an un-fired cell on the targeting grid; client sends `POST /api/games/:gameId/shot`.
+  4. Server validates the shot (correct turn, in-bounds, not already fired), resolves hit or miss against the opponent's ships, and broadcasts `shot_fired` to both players via SSE.
+  5. Both clients update their grids: hit cells turn red, misses get a neutral indicator. If a ship is fully sunk, its complete outline is revealed on the targeting grid and a "[Ship name] sunk!" notification appears for both players.
+  6. `next_turn` in the `shot_fired` payload passes control to the opponent; the server starts a new turn timer.
+  7. **Turn timer expires:** server broadcasts `turn_expired`; both clients show "[Player] ran out of time — turn skipped" and control passes to the opponent with no shot fired.
+  8. Steps 3–7 repeat until the game ends.
+- **Architectural pattern:** Request/response for shots (POST); SSE for broadcasting results to both players in real time; server-authoritative turn timer broadcast via `timer_tick` so both tabs always display the same countdown.
+- **Supports:** F6, F7, NF1, NF2, NF3, NF5
+
+---
 
 ### Flow 5 — Game over and return to lobby
-- **Purpose:** Conclude the game and update player records
-- **Trigger:** `game_over` SSE event received by both tabs
+- **Purpose:** Declare a winner, persist updated stats, and route both players back to the lobby.
+- **Trigger:** A `shot_fired` event resolves the final ship — all 5 of one player's ships are sunk.
 - **Walkthrough:**
-  1. Both tabs replace the battle UI with a game-over banner (winner / loser message)
-  2. Server updates win/loss stats for both players
-  3. Game status is set to `finished` and removed from the lobby list
-  4. Player clicks "Return to lobby" → routed back to the lobby
-- **Architectural pattern:** Request/response for stat updates (triggered server-side at game-over); routing for navigation
-- **Supports:** F8, F9
+  1. Server detects that the shot sank the last remaining ship. It emits `shot_fired` first so both clients can update the grid and show the final sunk notification, then immediately emits `game_over` (`winner_id`, `loser_id`).
+  2. Server marks the game `finished` with the winner's ID and increments `wins` + `games_played` for the winner and `losses` + `games_played` for the loser.
+  3. Both clients receive `game_over` and display a banner: winner sees "You won!", loser sees "You lost".
+  4. Each player clicks "Return to lobby" and is routed back. The lobby list has no stale entry to clean up — the game was already removed from `waiting` when it was joined in Flow 2.
+- **Architectural pattern:** SSE for the `game_over` push (keeps the game-ending sequence — shot then result — as a single ordered stream); stat update handled server-side synchronously before the event is emitted so stats are durable before either client sees the result; lobby navigation is a client-initiated route change requiring no server call.
+- **Supports:** F8, F9, NF1
 
 ---
 
@@ -595,54 +620,83 @@ Server-Sent Events are used for all server→client push instead of WebSockets. 
 
 **Tradeoff:** SSE is unidirectional (server→client only), which maps cleanly to a turn-based game where clients never need to push unsolicited data — actions always go through explicit POST endpoints. This simplifies the server (no socket lifecycle management, no upgrade handshake) and the client (native `EventSource` API, auto-reconnect built in). The cost: if we ever needed true bidirectional streaming (e.g. live cursor positions, voice), SSE would need to be replaced. For a turn-based game on localhost, this cost is zero.
 
+**Authority rule:** The SSE stream is the single source of truth; HTTP response bodies are used only to detect 4xx errors. A client never applies state from an HTTP response body — it waits for the corresponding SSE event, which arrives for both players including the actor.
+
 #### 2. Server-authoritative turn timer
 The countdown timer is driven and broadcast by the server, not calculated independently by each client.
 
 **Tradeoff:** Both tabs always show the same countdown value, eliminating drift between tabs even if one tab's JS event loop is throttled. The cost is a `timer_tick` SSE event every second per active game, which is negligible on localhost but would matter at scale. The alternative (each client calculates from a shared start timestamp) risks visible drift and makes forfeiture logic harder to trust.
+
+**Reset semantics:** Each time `current_turn` changes (shot fired or turn expired), the server cancels the existing timer and starts a fresh one at the full preset value. The first tick fires immediately at that full value.
 
 #### 3. Ship placement is client-side until submission
 Ship dragging, rotation, and hover preview are computed entirely in the browser. The server is not called until the player submits their final placement.
 
 **Tradeoff:** Placement interaction is instant and requires no network round-trips, keeping the UI snappy during the most interactive phase. The cost is that intermediate placement state cannot be recovered if the tab crashes before submission — the player would need to re-place their ships. Given the short placement window (30–60s) and localhost context, this is acceptable.
 
-#### 4. Two difficulty presets (Quick 30s / Casual 60s) over a free-form timer
-The timer is fixed at one of two named presets rather than a slider or arbitrary number input.
+**State threading:** The final `ships` array is passed forward as a prop into the battle phase; `App.tsx` holds it as `placedShips` state and passes it down. There is no server endpoint to retrieve placed ships — the fleet grid in battle is rendered from this in-memory array plus incoming `shot_fired` events.
 
-**Tradeoff:** Presets communicate intent ("Quick = harder") and prevent pathological values (0s, 3600s). The cost is less flexibility. For a local concept project this is the right call — no need to validate or explain arbitrary timer values.
+#### 4. Shared Zod schemas as the frontend/backend contract
+
+All API request and response shapes are defined once as Zod schemas in `shared/schemas.ts` and imported by both `server/` and `app/`. TypeScript types are inferred from the schemas (`z.infer<typeof Schema>`) rather than defined separately.
+
+**Tradeoff:** The TypeScript compiler cannot typecheck across an HTTP boundary — each side compiles independently, so a renamed field on the server compiles clean while silently breaking the frontend. Zod closes this gap: the schema is the single source of truth, and any mismatch between what the server produces and what the schema declares throws at runtime before the response is sent. Agents touching either side must update the shared schema, which surfaces the contract change to both. The cost is a `shared/` directory resolved via a `@shared` alias: `resolve.alias` + `tsconfig paths` in `app/`; `tsconfig paths` + `tsconfig-paths` for tsx in `server/`. No workspace packages; no relative `../../shared` imports in source files.
+
+#### 5. Client navigation via view-state enum, not a router
+Navigation between screens is a `view` enum in `App.tsx` (`'welcome' | 'lobby' | 'placement' | 'battle' | 'gameover'`). No `react-router` or URL-based routing. Route parameters (`gameId`, `playerId`, `placedShips`) are held as state in `App` and passed as props. The temporary dev route for PR3 is a `DEV_VIEW` constant in `App.tsx` that PR4 removes.
+
+#### 6. Shared geometry helper for ship cell calculation
+A pure `getOccupiedCells(ship)` function in `shared/geometry.ts` is the single implementation of "origin + size + orientation → occupied cells." For `H`, the ship extends toward higher column indices; for `V`, toward higher row indices (downward). Both the client (PR3 placement validation) and server (PR4 place validation, PR5 shot resolution) import this function — no agent re-derives the formula inline.
 
 ---
 
 ## PR Plan
 
-#### PR 1 — Foundation: player registration + lobby shell
-- **User-visible change:** A player can open the app, enter their name, and see a lobby screen (even if empty)
-- **Scope:** `POST /api/players`, `GET /api/games`, `GET /api/lobby/events` SSE endpoint; Welcome screen component; Lobby shell with empty state; player and game stores
-- **Satisfies:** F1, F2 (lobby renders, SSE connected)
+
+Each PR is a **vertical slice**: it adds a complete, working capability a real user can exercise the moment it ships. PRs build on each other incrementally — each one extends what the previous made possible, never retracts it. "Foundation", "infrastructure", and "boilerplate" PRs are an antipattern: a purely technical baseline with no user outcome is a PR that shouldn't exist on its own. When setup is unavoidable, it ships inside the PR whose user-facing feature is the first to need it.
+
+| PR | What a user can do at the end | New table | New schemas | Parallel with |
+|---|---|---|---|---|
+| 1 | Register and reach the lobby | `players` | player req/resp | — |
+| 2 | Create, browse, and join games | `games` | game + lobby SSE | PR 3 |
+| 3 | Arrange a fleet on the grid | — | — | PR 2 |
+| 4 | Run the timed placement handshake | `ships` | place / ready / game SSE | — |
+| 5 | Play a full game to a winner | `shots` | shot / battle SSE | — |
+
+---
+
+#### PR 1 — Welcome screen + player registration
+- **Outcome:** A visitor types a name, clicks "Play" (disabled until at least one non-whitespace character is entered), and lands on the lobby. Returning with the same name retrieves the existing record. The player record persists across server restarts.
+- **Satisfies:** F1 AC1–5; F9 AC1–2 (record shape and persistence — win/loss counters wired in PR 5); NF4 AC1
 - **Depends on:** none
 
-#### PR 2 — Lobby: game creation and joining _(after PR 1)_
-- **User-visible change:** Player A can create a game with a preset; Player B sees it in the lobby list and can join; both transition to a "Game starting…" placeholder
-- **Scope:** `POST /api/games`, `POST /api/games/:gameId/join`; Create Game modal; lobby list rows with player stats; join button; real-time lobby updates via SSE
-- **Satisfies:** F2, F3, F9 (stats shown in lobby)
+---
+
+#### PR 2 — Lobby: create, browse, join *(parallel with PR 3)*
+- **Outcome:** Two players find each other in the lobby: Player A creates a game (Quick 30s or Casual 60s) and waits; Player B sees the row and joins. Both are routed to placement. The lobby list updates in real time across all tabs.
+- **Satisfies:** F2 AC1–2; F3 AC1–4; F5 AC1; NF2 AC2; NF5 AC4
 - **Depends on:** PR 1
 
-#### PR 3 — Placement phase _(after PR 2)_
-- **User-visible change:** Both players can place their ships, rotate them, reset the board, and click "I'm ready!"; the placement timer counts down live; expired timer returns both to the lobby
-- **Scope:** `POST /api/games/:gameId/place`, `POST /api/games/:gameId/ready`, `GET /api/games/:gameId/events` (placement events); FleetGrid component; ShipPalette component; hover preview + R key rotation; server-side placement timer; placement expiry logic
-- **Satisfies:** F4, F5, NF1 (SSE for timer)
-- **Depends on:** PR 2
+---
 
-#### PR 4 — Battle phase _(after PR 3)_
-- **User-visible change:** Players alternate firing shots; hits/misses update live on both tabs; sunk ships reveal; forfeited turns are announced; turn timer counts down
-- **Scope:** `POST /api/games/:gameId/shot`; TargetingGrid component; battle layout (two grids + banner); shot result rendering (hit/miss/sunk); server-side turn timer; turn expiry logic; SSE shot and timer events
-- **Satisfies:** F6, F7, NF1 (shot SSE), NF3 (input validation)
-- **Depends on:** PR 3
+#### PR 3 — Ship placement interaction *(parallel with PR 2)*
+- **Outcome:** A player can arrange their fleet on the placement grid — click to select, hover to preview (green/red validity), `R` to rotate, click to place, click a placed ship to reposition, Reset to clear. Client-only; no server changes. Reachable via a `DEV_VIEW` constant in `App.tsx`, removed in PR 4.
+- **Satisfies:** F4 AC1–7
+- **Depends on:** PR 1
 
-#### PR 5 — Game over + stats _(parallel with PR 4, depends on PR 3)_
-- **User-visible change:** Game-over banner with winner/loser message; stats updated; "Return to lobby" routes back correctly
-- **Scope:** `game_over` SSE handling; GameOver component; stat update logic on server; lobby cleanup on game finish
-- **Satisfies:** F8, F9 (stats updated at game end)
-- **Depends on:** PR 3 _(can be developed in parallel with PR 4 once the SSE event contract is agreed)_
+---
+
+#### PR 4 — Placement handshake: timer, ready, phase transition *(sequential after PRs 2 and 3)*
+- **Outcome:** Both players see a live synchronized countdown the moment the second player joins. "I’m ready!" enables once all 5 ships are placed; clicking it submits the fleet and locks the UI. Both tabs enter battle when both players are ready, or return to the lobby with a dismissible message if the timer expires. Wires the placement UI (PR 3) into the join flow (PR 2).
+- **Satisfies:** F5 AC2–6; NF1 AC1–2; NF2 AC1; NF3 AC4; NF5 AC1
+- **Depends on:** PRs 2 and 3
+
+---
+
+#### PR 5 — Battle phase + game over *(sequential after PR 4)*
+- **Outcome:** Players alternate shots on the targeting grid; hits show red, misses show a dot, sunk ships are outlined with a notification. Both grids update in real time. An expired turn is skipped with a notification. When a fleet is destroyed, both players see "You won!" / "You lost", stats update, and both return to the lobby.
+- **Satisfies:** F6 AC1–5; F7 AC1–5; F8 AC1–6; F9 AC1–2 (counters incremented); NF1 AC1–2; NF2 AC1–2; NF3 AC1–3; NF5 AC2–3
+- **Depends on:** PR 4
 
 ---
 
