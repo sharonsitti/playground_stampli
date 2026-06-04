@@ -36,24 +36,22 @@ A two-player Battleship game playable across two browser tabs on the same machin
 As a new visitor, I want to enter my name before entering the lobby so that my identity and stats are tracked across games.
 
 **Acceptance criteria:**
-- [ ] On first visit (or when no player name is stored in localStorage), the welcome screen is shown
-- [ ] The welcome screen has a single text input for name and a "Play" button
-- [ ] "Play" is disabled until at least 1 non-whitespace character is entered
-- [ ] Submitting creates or retrieves the player record on the server and stores the player ID in localStorage
-- [ ] After submit, the player is taken to the lobby
-- [ ] If a player ID already exists in localStorage, the welcome screen is skipped and the player goes directly to the lobby
+1. The welcome screen is shown every time the app is opened
+2. The welcome screen has a single text input for name and a "Play" button
+3. "Play" is disabled until at least 1 non-whitespace character is entered
+4. Submitting creates or retrieves the player record on the server
+5. After submit, the player is taken to the lobby
 
 #### F2 — Lobby: game list and creation
 As a player in the lobby, I want to see open games and create my own so that I can find an opponent.
 
 **Acceptance criteria:**
-- [ ] The lobby lists all games with status `waiting` (open for a second player to join)
-- [ ] Each row in the list shows: creator name, win/loss record, win rate, and difficulty preset (Quick / Casual)
-- [ ] A "Create Game" button opens a modal to choose a preset (Quick 30s / Casual 60s) and confirm
-- [ ] Creating a game adds it to the list for other players and puts the creator into a "Waiting for opponent..." holding state
-- [ ] A "Join" button on any open game row immediately starts the placement phase for both players
-- [ ] Games that are in-progress or finished are not shown in the lobby list
-- [ ] The lobby list updates in real time via SSE when games are created or joined
+1. The lobby lists only games with status `waiting`; in-progress and finished games are not shown
+2. Each row in the list shows: creator name, win/loss record, win rate, and difficulty preset (Quick / Casual)
+3. A "Create Game" button opens a modal to choose a preset (Quick 30s / Casual 60s) and confirm
+4. Creating a game puts the creator into a "Waiting for opponent..." holding state
+5. A "Join" button on any open game row immediately starts the placement phase for both players
+6. The lobby list updates in real time via SSE when games are created or joined
 
 #### F3 — Ship placement phase
 As a player, I want to place my 5 ships on my fleet grid before the game begins so that the battle can start.
@@ -68,59 +66,50 @@ As a player, I want to place my 5 ships on my fleet grid before the game begins 
 | Destroyer | 2 cells |
 
 **Acceptance criteria:**
-- [ ] The fleet grid is 10×10; columns are labeled `a`–`j`, rows `1`–`10`
-- [ ] Both players enter the placement phase simultaneously when the second player joins
-- [ ] A countdown timer (from the game's preset value) is visible and synchronized via SSE across both tabs
-- [ ] The ship palette lists all 5 ships; placed ships are removed from the palette
-- [ ] Clicking a ship in the palette selects it; the selected ship follows the cursor as a hover preview snapped to grid cells
-- [ ] The preview anchors from the ship's top-left cell; valid placement = green highlight, invalid = red highlight
-- [ ] Ships may be placed horizontally or vertically only — no diagonal
-- [ ] Ships must fit entirely within the grid boundaries; out-of-bounds preview shows red
-- [ ] Ships may not overlap each other; overlapping preview shows red
-- [ ] Ships may touch each other (no buffer zone required)
-- [ ] Orientation can be toggled via a "Rotate" button in the palette or the `R` key; toggling updates the live preview immediately
-- [ ] Clicking a valid cell places the ship; clicking an invalid cell does nothing
-- [ ] Clicking an already-placed ship on the fleet grid picks it back up into the cursor (returns it to selected state)
-- [ ] A "Reset" button clears all placed ships and repopulates the palette
-- [ ] The "I'm ready!" button is disabled until all 5 ships are placed
-- [ ] Clicking "I'm ready!" locks placement, disables and visually highlights the button (no text change), and notifies the server
-- [ ] If both players click "I'm ready!" before the timer expires, the battle phase begins immediately
-- [ ] If the timer expires before both players have clicked "I'm ready!", the game is terminated: no winner is recorded, both players are returned to the lobby with a dismissible message explaining what happened
+1. The fleet grid is 10×10; columns are labeled `a`–`j`, rows `1`–`10`
+2. Both players enter the placement phase simultaneously when the second player joins
+3. A countdown timer (from the game's preset value) is visible and synchronized via SSE across both tabs
+4. Clicking a ship in the palette selects it and shows a hover preview snapped to the grid, anchored from the ship's top-left cell; placed ships are removed from the palette
+5. Valid placement = green highlight; invalid = red highlight (rules: H/V only, must fit in bounds, no overlap; ships may touch)
+6. Orientation can be toggled via a "Rotate" button in the palette or the `R` key; toggling updates the live preview immediately
+7. Clicking an already-placed ship on the fleet grid picks it back up into the cursor
+8. A "Reset" button clears all placed ships and repopulates the palette
+9. The "I'm ready!" button is disabled until all 5 ships are placed; clicking it locks placement, disables and visually highlights the button (no text change), and notifies the server
+10. If both players click "I'm ready!" before the timer expires, the battle phase begins immediately
+11. If the timer expires before both players have clicked "I'm ready!", the game is terminated: no winner is recorded, both players are returned to the lobby with a dismissible message
 
 #### F4 — Battle phase: firing shots
 As a player, I want to fire shots at the opponent's grid on my turn so that I can sink their fleet.
 
 **Acceptance criteria:**
-- [ ] The battle phase shows two grids side by side: fleet grid (left) and targeting grid (right)
-- [ ] The game creator takes the first turn
-- [ ] A prominent banner shows "Your turn" or "Waiting for opponent..." with a live countdown
-- [ ] On each turn, the active player fires exactly one shot by clicking a cell on the targeting grid
-- [ ] The active player can click any un-fired cell on the targeting grid to fire a shot
-- [ ] Fired cells on the targeting grid are non-interactive for the rest of the game
-- [ ] A hit is marked in red; a miss is marked with a neutral indicator (e.g. white dot)
-- [ ] When all cells of an opponent's ship are hit, the ship is sunk: its full outline is revealed on the targeting grid and a "[Ship name] sunk!" notification is shown
-- [ ] Incoming hits and misses from the opponent are shown on the player's fleet grid in real time via SSE
-- [ ] If a player's turn timer expires, their turn is forfeited: both players see "[Player] ran out of time — turn skipped" and the turn passes to the opponent with no shot fired
-- [ ] The targeting grid is non-interactive when it is not the player's turn
+1. The battle phase shows two grids side by side: fleet grid (left) and targeting grid (right)
+2. The game creator takes the first turn
+3. A prominent banner shows "Your turn" or "Waiting for opponent..." with a live countdown
+4. On each turn, the active player fires exactly one shot by clicking any un-fired cell on the targeting grid; fired cells are non-interactive for the rest of the game
+7. A hit is marked in red; a miss is marked with a neutral indicator (e.g. white dot)
+8. When all cells of an opponent's ship are hit, the ship is sunk: its full outline is revealed on the targeting grid and a "[Ship name] sunk!" notification is shown
+9. Incoming hits and misses from the opponent are shown on the player's fleet grid in real time via SSE
+10. If a player's turn timer expires, their turn is forfeited: both players see "[Player] ran out of time — turn skipped" and the turn passes to the opponent with no shot fired
+11. The targeting grid is non-interactive when it is not the player's turn
 
 #### F5 — Game over
 As a player, I want to see a clear result when the game ends so that I know who won and can return to the lobby.
 
 **Acceptance criteria:**
-- [ ] The game ends when all 5 ships in one player's fleet are sunk; the opponent who sunk them wins
-- [ ] Both players see a game-over banner: winner sees "You won!", loser sees "You lost"
-- [ ] Win/loss stats for both players are updated on the server immediately
-- [ ] A "Return to lobby" button takes the player back to the lobby
-- [ ] The finished game is removed from the lobby list
+1. The game ends when all 5 ships in one player's fleet are sunk; the opponent who sunk them wins
+2. Both players see a game-over banner: winner sees "You won!", loser sees "You lost"
+3. Win/loss stats for both players are updated on the server immediately
+4. A "Return to lobby" button takes the player back to the lobby
+5. The finished game is removed from the lobby list
 
 #### F6 — Player stats
 As a player, I want my win/loss record to persist across games in the same session so that the lobby shows accurate stats.
 
 **Acceptance criteria:**
-- [ ] Each player record tracks: name, games played, wins, losses, win rate
-- [ ] Stats are updated at game-over (win/loss increment)
-- [ ] Stats are shown in the lobby game list (opponent's stats) and on the welcome screen return (player's own stats if they revisit)
-- [ ] Stats reset on server restart (in-memory storage is acceptable)
+1. Each player record tracks: name, games played, wins, losses, win rate
+2. Stats are updated at game-over (win/loss increment)
+3. Stats are shown in the lobby game list (opponent's stats)
+4. Stats reset on server restart (in-memory storage is acceptable)
 
 ---
 
@@ -130,26 +119,26 @@ As a player, I want my win/loss record to persist across games in the same sessi
 All multi-tab coordination (lobby updates, placement timer, turn changes, shot results, game-over) must be pushed via SSE, not polling.
 
 **Acceptance criteria:**
-- [ ] Each active tab holds one SSE connection to `/api/events/:gameId` (or `/api/lobby/events` for lobby)
-- [ ] Turn timer countdown is driven by the server and broadcast via SSE so both tabs show the same value
-- [ ] Latency from a shot POST to both tabs reflecting the result is imperceptible under normal localhost conditions
+1. Each active tab holds one SSE connection to `/api/events/:gameId` (or `/api/lobby/events` for lobby)
+2. Turn timer countdown is driven by the server and broadcast via SSE so both tabs show the same value
+3. Latency from a shot POST to both tabs reflecting the result is imperceptible under normal localhost conditions
 
 #### NF2 — Responsive layout
 The game must be usable on mobile screen sizes without horizontal scrolling.
 
 **Acceptance criteria:**
-- [ ] Grids, palette, and controls reflow for screens as narrow as 375px
-- [ ] Touch targets (cells, buttons) are at minimum 44×44px on mobile
-- [ ] The two-grid battle layout stacks vertically on narrow screens
+1. Grids, palette, and controls reflow for screens as narrow as 375px
+2. Touch targets (cells, buttons) are at minimum 44×44px on mobile
+3. The two-grid battle layout stacks vertically on narrow screens
 
 #### NF3 — Input safety
 The server must not crash or corrupt state from malformed client input.
 
 **Acceptance criteria:**
-- [ ] Out-of-bounds shot coordinates are rejected with a 400 response
-- [ ] Firing on an already-fired cell is rejected with a 400 response
-- [ ] Acting out of turn is rejected with a 403 response
-- [ ] Server errors surface a user-readable message and never crash the handler
+1. Out-of-bounds shot coordinates are rejected with a 400 response
+2. Firing on an already-fired cell is rejected with a 400 response
+3. Acting out of turn is rejected with a 403 response
+4. Server errors surface a user-readable message and never crash the handler
 
 ---
 
@@ -387,13 +376,12 @@ SSE stream for the lobby. Pushes updates when open games change.
 
 ### Flow 1 — Player registration
 - **Purpose:** Establish player identity before entering the lobby
-- **Trigger:** User opens the app with no player ID in localStorage
+- **Trigger:** User opens the app
 - **Walkthrough:**
   1. Welcome screen renders with name input and disabled "Play" button
   2. User types their name; "Play" enables
   3. User submits → `POST /api/players` → server returns player record
-  4. Player ID saved to localStorage
-  5. User is routed to the lobby
+  4. User is routed to the lobby
 - **Architectural pattern:** Request/response — one-shot, no streaming needed
 - **Supports:** F1, F6
 
@@ -488,7 +476,7 @@ All player and game state is held in server memory. No SQLite, file persistence,
 
 #### PR 1 — Foundation: player registration + lobby shell
 - **User-visible change:** A player can open the app, enter their name, and see a lobby screen (even if empty)
-- **Scope:** `POST /api/players`, `GET /api/games`, `GET /api/lobby/events` SSE endpoint; Welcome screen component; Lobby shell with empty state; localStorage player ID persistence; in-memory player and game stores
+- **Scope:** `POST /api/players`, `GET /api/games`, `GET /api/lobby/events` SSE endpoint; Welcome screen component; Lobby shell with empty state; in-memory player and game stores
 - **Satisfies:** F1 (all AC), F2 (lobby renders, SSE connected)
 - **Depends on:** none
 
