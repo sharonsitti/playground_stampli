@@ -42,3 +42,39 @@ Everything in the harness is designed around the same minimalism as the codebase
 ## Test coverage
 
 The frontend coverage threshold is set to **5%** across all metrics (statements, branches, functions, lines). This is intentionally low — the project is a conceptual pairing surface, not a production system. The threshold exists to catch complete regressions, not to enforce production-grade coverage discipline.
+
+## Work process
+
+This section documents how the feature work for this repo was approached — specifically how the spec was built and how implementation was driven from it.
+
+### 1. Domain research
+
+Started by reading the assignment, then used LLMs and YouTube videos to understand the game, its rules, and its conventions. The goal was to arrive at a clear mental model before writing a single line of spec.
+
+### 2. Spec conversation
+
+Conversed with Claude Code to build shared context — surfacing questions about game rules, user interactions, expected behaviors, and edge cases before any decisions were locked in. The conversation was the first draft of the spec.
+
+### 3. Spec writing
+
+Wrote the spec using a fixed template, working strictly top-down: each section builds only on the sections that precede it, never on what comes after. The final section — PR slicing — is the most important: it accumulates all context, decisions, and constraints from the entire document. The spec is deliberately light on implementation detail; implementation decisions belong to the harness and the agents executing it, not the spec.
+
+### 4. UI mockup (in parallel)
+
+In parallel with spec writing, fed the functional requirements to a separate agent that generated a mock UI design system. The output was tweaked to taste, a screenshot was taken, and the mockup code was discarded. The screenshot is the source of truth for UI and experience development — not the code.
+
+### 5. Spec review for autonomous executability
+
+Used Claude Code to review the spec from the perspective of a team of autonomous agents: could they execute it without ambiguity, without a human in the loop, and without diverging from intent? Gaps surfaced in review were fixed in the spec before implementation began.
+
+### 6. PR slicing
+
+PR slicing is the critical piece. Multiple rounds of review were done using Opus to verify that a team of autonomous agents could execute each PR independently — in sequence, without coordination, and without drifting from the original spec. Each PR was scoped to be fully executable from the spec alone, with no hidden dependencies on conversations that happened outside it.
+
+### Where human judgment was concentrated
+
+The requirements section of the spec is where the most judgment calls were made — deliberately so, because every subsequent section builds off it. Getting requirements right meant the rest of the spec could be derived rather than invented.
+
+Architecture decisions were strategically chosen to give the implementation a clear technical direction. These weren't defaults — they were picks made with intent, to constrain the solution space in a way that matched the goals of the project.
+
+PR slicing was the section most personally scrutinized. It is the contract between the spec and execution: if it is wrong, autonomous agents diverge. Every PR boundary was reviewed to ensure it was unambiguous, self-contained, and faithful to the original spec.
