@@ -7,6 +7,9 @@ A full-stack app (Express backend + React frontend) used as a pairing surface fo
 ```
 server/                Node.js/Express backend
   src/index.ts         Entry point — routes live here
+  src/db/              Database layer
+    schema.sql         Table definitions — run on startup
+    *.repository.ts    One repository file per entity
   package.json
   tsconfig.json
 app/                   React frontend
@@ -17,7 +20,7 @@ app/                   React frontend
   vite.config.ts       Vite + Tailwind CSS v4 config
 docs/                  Product/technical context — source of truth for behavior
 .claude/
-  skills/              Project-local Claude skills (spec, dev, add-tests, make-pr)
+  skills/              Project-local Claude skills (dev, add-tests, make-pr)
   hooks/               PostToolUse hooks (frontend-check.sh)
   settings.json        Permissions, hooks, enabled plugins
 .github/               CI workflows (client-ci on every PR)
@@ -36,8 +39,10 @@ Makefile               Single entry point for dev, install, lint, type, test
 | Frontend styling | Tailwind CSS v4 (via @tailwindcss/vite), tw-animate-css |
 | Frontend components | shadcn/ui (Base UI primitives + CVA + clsx + tailwind-merge) |
 | Frontend icons | lucide-react |
-| Frontend lint/format | ESLint 10 + typescript-eslint, Prettier + prettier-plugin-tailwindcss |
-| Frontend tests | Vitest, @testing-library/react, happy-dom |
+| Frontend lint/format | ESLint 10 + typescript-eslint + eslint-plugin-security, Prettier + prettier-plugin-tailwindcss |
+| Frontend tests | Vitest + @vitest/coverage-v8, @testing-library/react, happy-dom |
+| Database | better-sqlite3 (local SQLite, single `.db` file) |
+
 
 ## docs/ is the source of truth
 
@@ -82,6 +87,27 @@ A git `pre-commit` hook in [.githooks/](./.githooks/) runs `make check` (both si
 1. Auto-fixes: `eslint --fix` + `prettier --write` (never blocks)
 2. Blocks and surfaces errors to Claude on `tsc --noEmit` failure (exit 2)
 
+### ESLint rule posture
+
+Both `app/` and `server/` use `eslint-plugin-security` to catch SQL injection, unsafe regex, `eval`, and similar patterns. In `app/`, the complexity caps (`max-lines`, `max-lines-per-function`, `complexity`) are **errors**, not warnings — agents are hard-blocked, not nudged.
+
+Two additional rules fire as errors and commonly surprise agents:
+- **`react-hooks/exhaustive-deps`** — every variable captured inside `useEffect`/`useCallback`/`useMemo` must appear in the dependency array, or the hook blocks the commit. Missing deps are the most common React bug.
+- **`react-x/no-array-index-key`** — using an array index as a React `key` prop is an error. Use a stable, unique id (e.g. cell coordinates, ship type) instead.
+
+### Coverage thresholds (frontend)
+
+`make client-test` runs `vitest run --coverage`. Thresholds are enforced in `app/vite.config.ts`:
+
+| Metric | Threshold |
+|---|---|
+| Statements | 5% |
+| Branches | 5% |
+| Functions | 5% |
+| Lines | 5% |
+
+Intentionally low — this is a conceptual pairing surface, not a production system. The threshold exists to catch complete regressions, not enforce production-grade coverage. **Raise as coverage improves — never lower.**
+
 ### Allowed permissions (`.claude/settings.json`)
 
 Pre-approved without a prompt:
@@ -91,7 +117,6 @@ Pre-approved without a prompt:
 - `Bash(git mv *)`, `Bash(git check-ignore *)`
 - `mcp__plugin_context7_context7__resolve-library-id`
 - `mcp__plugin_context7_context7__query-docs`
-- `Edit(/.claude/skills/spec/**)`
 
 ### Enabled plugins / MCPs
 
@@ -106,7 +131,6 @@ Pre-approved without a prompt:
 
 Project-local skills live in `.claude/skills/`. Invoke when the user's request matches the trigger:
 
-- **`spec`** — authors `docs/feat-<name>.md`: goal, problem, personas, ranked requirements with measurable acceptance criteria, workflows, PR plan, risks. Use for "spec X", "/spec", "write the spec for...". Asks at most 3 critical clarifying questions, then drafts; any remaining unknowns become an "Open questions" section in the doc.
 - **`dev`** — engineering fundamentals for non-trivial code changes: clean code, SOLID, DRY, decoupling, componentization, KISS, no bloat. Use for "/dev", "implement X", "refactor X". Plans against `docs/` + `CLAUDE.md` before writing; never touches tests (that's `add-tests`).
 - **`add-tests`** — writes unit/integration tests **driven by `docs/`**, not the implementation. Use for "add tests", "/add-tests", "write tests for X". Proposes ranked happy/unhappy checks first and waits for confirmation before writing code. Refuses to proceed if `docs/` is silent on the feature.
 - **`make-pr`** — opens or refreshes a GitHub PR for the current branch via `gh`. Use for "make a PR", "/make-pr", "update the PR". Pushes the branch and submits without further confirmation.
@@ -125,3 +149,21 @@ Global skills also available (from `~/.claude/skills/` or plugin registry):
 - No bloat: don't add deps, scripts, abstractions, or files until a concrete use exists.
 - No comments explaining *what* code does — only *why* when non-obvious.
 - Interview scope: pick the simplest pattern that demonstrates the idea (no Redux, no microservices, no premature scaffolding).
+- **Tailwind CSS v4:** syntax differs significantly from v3 (CSS-native `@theme {}` config, no `tailwind.config.js`). Use context7 to fetch current Tailwind v4 docs before writing any styles — do not rely on v3 patterns from training data.
+- **shadcn/ui components:** only use what is already installed: `button`, `card`, `dialog`, `input`. Do not install additional components.
+
+## Server conventions
+
+- **`better-sqlite3` is synchronous.** All DB calls return values directly — no `async`/`await`, no `.then()`. Wrapping them in `async` functions compiles fine but is misleading; keep DB calls synchronous throughout.
+- **Ports:** server runs on `8000`, frontend on `3000`. The CORS header in `server/src/index.ts` already allows `http://localhost:3000`. Frontend API calls go to `http://localhost:8000`.
+- **Server tests** use vitest + supertest (same vitest as the frontend). See `server/src/index.test.ts` for the pattern.
+
+## `@shared` alias
+
+`shared/` is a module shared between `server/` and `app/`. It must be configured in three places:
+
+1. **`app/vite.config.ts`** — add to `resolve.alias`: `'@shared': path.resolve(__dirname, '../shared')`
+2. **`app/tsconfig.json`** — add to `compilerOptions.paths`: `"@shared/*": ["../shared/*"]`
+3. **`server/tsconfig.json`** — add to `compilerOptions.paths`: `"@shared/*": ["../shared/*"]`; also register `tsconfig-paths` with tsx so path aliases resolve at runtime (pass `-r tsconfig-paths/register` or equivalent)
+
+Import as `import { Foo } from '@shared/schemas'` on both sides. Never use relative `../../shared` imports in source files.

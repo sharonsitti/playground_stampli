@@ -1,1 +1,0 @@
-- [LeetCode patterns & solved problems](project-leetcode-patterns.md) — problem index, dummy-head idiom, carry loop termination condition, test harness conventions

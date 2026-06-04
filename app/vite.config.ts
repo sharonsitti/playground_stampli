@@ -14,5 +14,16 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     passWithNoTests: true,
+    coverage: {
+      provider: 'v8',
+      // Thresholds enforced on every test run — failing coverage blocks CI and pre-commit.
+      // Raise these as test coverage improves; never lower them.
+      thresholds: {
+        statements: 5,
+        branches: 5,
+        functions: 5,
+        lines: 5,
+      },
+    },
   },
 })

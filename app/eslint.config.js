@@ -8,11 +8,12 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import reactX from 'eslint-plugin-react-x'
+import security from 'eslint-plugin-security'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'coverage']),
 
   {
     files: ['**/*.{ts,tsx}'],
@@ -27,6 +28,7 @@ export default defineConfig([
       // React-specific rules: misused JSX, missing keys, dangerous patterns.
       // (react-x is the ESLint 10–compatible successor to the original eslint-plugin-react.)
       reactX.configs['recommended-typescript'],
+      security.configs.recommended,
 
       // Rules of Hooks — fails if you call useState/useEffect conditionally or outside a component.
       reactHooks.configs.flat.recommended,
@@ -61,11 +63,10 @@ export default defineConfig([
       // reordered, or removed — React reuses the wrong DOM nodes. Use a stable id instead.
       'react-x/no-array-index-key': 'error',
 
-      // Soft caps on file/function size and branching complexity — a "this is getting big" smell.
-      // Set as warnings so an edit isn't blocked mid-flow, but the smell is visible in CI and the editor.
-      'max-lines': ['warn', { max: 250, skipBlankLines: true, skipComments: true }],
-      'max-lines-per-function': ['warn', { max: 80, skipBlankLines: true, skipComments: true }],
-      complexity: ['warn', 10],
+      // Hard caps on file/function size and branching complexity — agents are blocked, not warned.
+      'max-lines': ['error', { max: 250, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['error', { max: 120, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', 15],
     },
   },
 
@@ -76,6 +77,16 @@ export default defineConfig([
     rules: {
       'max-lines': 'off',
       'react-refresh/only-export-components': 'off',
+    },
+  },
+
+  {
+    // App.tsx predates the strict size limits and needs to be broken into smaller components.
+    // Remove this override once App is refactored — do not add new exceptions here.
+    files: ['src/App.tsx'],
+    rules: {
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
     },
   },
 ])
