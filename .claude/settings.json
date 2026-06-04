@@ -12,7 +12,9 @@
       "mcp__plugin_context7_context7__query-docs",
       "Bash(git check-ignore *)",
       "Edit(/.claude/skills/spec/**)",
-      "WebFetch(domain:www.stampli.com)"
+      "WebFetch(domain:www.stampli.com)",
+      "Bash(rm /Users/sharonsitti/Documents/Development/playground_stampli/.claude/agents/leetcode-interview-companion.md)",
+      "Bash(rm -rf /Users/sharonsitti/Documents/Development/playground_stampli/.claude/agent-memory/leetcode-interview-companion)"
     ],
     "additionalDirectories": [
       ".claude/skills"
