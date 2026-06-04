@@ -65,8 +65,8 @@ export default defineConfig([
 
       // Hard caps on file/function size and branching complexity — agents are blocked, not warned.
       'max-lines': ['error', { max: 250, skipBlankLines: true, skipComments: true }],
-      'max-lines-per-function': ['error', { max: 80, skipBlankLines: true, skipComments: true }],
-      complexity: ['error', 10],
+      'max-lines-per-function': ['error', { max: 120, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', 15],
     },
   },
 

@@ -10,7 +10,12 @@ export default defineConfig([
 
   {
     files: ['**/*.ts'],
-    extends: [js.configs.recommended, ...tseslint.configs.strictTypeChecked, security.configs.recommended, prettier],
+    extends: [
+      js.configs.recommended,
+      ...tseslint.configs.strictTypeChecked,
+      security.configs.recommended,
+      prettier,
+    ],
     languageOptions: {
       globals: globals.node,
       parserOptions: {
