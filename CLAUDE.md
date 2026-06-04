@@ -39,8 +39,8 @@ Makefile               Single entry point for dev, install, lint, type, test
 | Frontend styling | Tailwind CSS v4 (via @tailwindcss/vite), tw-animate-css |
 | Frontend components | shadcn/ui (Base UI primitives + CVA + clsx + tailwind-merge) |
 | Frontend icons | lucide-react |
-| Frontend lint/format | ESLint 10 + typescript-eslint, Prettier + prettier-plugin-tailwindcss |
-| Frontend tests | Vitest, @testing-library/react, happy-dom |
+| Frontend lint/format | ESLint 10 + typescript-eslint + eslint-plugin-security, Prettier + prettier-plugin-tailwindcss |
+| Frontend tests | Vitest + @vitest/coverage-v8, @testing-library/react, happy-dom |
 | Database | better-sqlite3 (local SQLite, single `.db` file) |
 
 
@@ -86,6 +86,23 @@ A git `pre-commit` hook in [.githooks/](./.githooks/) runs `make check` (both si
 **`.claude/hooks/server-check.sh`** — fires on `.ts` files under `server/`:
 1. Auto-fixes: `eslint --fix` + `prettier --write` (never blocks)
 2. Blocks and surfaces errors to Claude on `tsc --noEmit` failure (exit 2)
+
+### ESLint rule posture
+
+Both `app/` and `server/` use `eslint-plugin-security` to catch SQL injection, unsafe regex, `eval`, and similar patterns. In `app/`, the complexity caps (`max-lines`, `max-lines-per-function`, `complexity`) are **errors**, not warnings — agents are hard-blocked, not nudged.
+
+### Coverage thresholds (frontend)
+
+`make client-test` runs `vitest run --coverage`. Thresholds are enforced in `app/vite.config.ts`:
+
+| Metric | Threshold |
+|---|---|
+| Statements | 60% |
+| Branches | 70% |
+| Functions | 20% |
+| Lines | 50% |
+
+These are set at the current baseline. **Raise them as coverage improves — never lower them.**
 
 ### Allowed permissions (`.claude/settings.json`)
 

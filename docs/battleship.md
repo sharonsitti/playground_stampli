@@ -69,7 +69,7 @@ As a player, I want to arrange my fleet on the grid using click interactions so 
 | Destroyer | 2 cells |
 
 **Acceptance criteria:**
-1. The fleet grid is 10×10; columns are labeled `a`–`j`, rows `1`–`10`
+1. The fleet grid is 10×10; columns are labeled `a`–`j`, rows `1`–`10`. Column letters map to integers in the API: `a=0, b=1, …, j=9`; this encoding is used in all ship placement and shot endpoints.
 2. Clicking a ship in the palette selects it and shows a hover preview snapped to the grid, anchored from the ship's top-left cell
 3. Once a ship is placed, it is removed from the palette
 4. Valid placement = green highlight; invalid = red highlight (rules: H/V only, must fit in bounds, no overlap; ships may touch)
@@ -203,6 +203,9 @@ Represents a single game instance from creation through completion; drives lobby
 **Indices:**
 - `status` — range scan over all games in a given status
 
+**Notes:**
+- A game whose placement timer expires before both players are ready is marked `finished` with `winner_id: null`. No new status value is needed.
+
 ---
 
 #### `ships`
@@ -236,6 +239,8 @@ One entry per endpoint. These are the interface contracts — the request and re
 
 All 4xx and 5xx responses return `{ "error": string }`.
 
+All POST request bodies that include `player_id` use the `id` field returned by `POST /api/players`, stored client-side.
+
 ---
 
 #### `POST /api/players`
@@ -256,7 +261,7 @@ Creates or retrieves a player record by name. If a player with the given name al
   games_played: number
   wins: number
   losses: number
-  win_rate: number  // wins / games_played; 0 if games_played is 0
+  win_rate: number  // wins / games_played; 0 if games_played is 0; raw float (e.g. 0.67) — frontend formats for display
 }
 ```
 
@@ -310,7 +315,7 @@ data: <json>
 }
 ```
 
-`game_removed` — a game left `waiting` status (joined or expired); remove it from the lobby list
+`game_removed` — a game left `waiting` status because it was joined; remove it from the lobby list
 ```ts
 {
   id: string
@@ -385,7 +390,7 @@ data: <json>
 }
 ```
 
-`timer_tick` — one-second tick broadcast every second during the placement countdown and between turns in battle
+`timer_tick` — one-second tick broadcast every second during the placement countdown and between turns in battle. The first tick fires immediately when the countdown begins (at the full `timer_seconds` value), so the client displays `seconds_remaining` from the very first tick rather than special-casing the initial value from `player_joined` or `battle_start`.
 ```ts
 {
   seconds_remaining: number
@@ -434,7 +439,7 @@ data: <json>
 }
 ```
 
-`game_over` — all ships of one player are sunk; game is finished
+`game_over` — all ships of one player are sunk; game is finished. On the game-ending shot, the server emits `shot_fired` first so the client can update the grid, then emits `game_over` immediately after.
 ```ts
 {
   winner_id: string
@@ -445,7 +450,7 @@ data: <json>
 ---
 
 #### `POST /api/games/:gameId/place`
-Submits the player's final ship placements. Must be called before `/ready`. Server validates that all 5 ships are present, within bounds, and non-overlapping.
+Submits the player's final ship placements. Must be called before `/ready`. Server validates that all 5 ships are present (one of each type), within bounds, and non-overlapping. A second call before `/ready` overwrites the previous placement.
 
 **Request**
 ```ts
