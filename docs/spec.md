@@ -379,7 +379,7 @@ Joins a `waiting` game, transitioning it to `placing`. Triggers the placement ph
 **Request**
 ```ts
 {
-  player_id: string  // UUID of the joining player
+  player_id: string  // UUID of the joining player; must not equal the game's creator_id — returns 403 otherwise (a creator cannot join their own game)
 }
 ```
 

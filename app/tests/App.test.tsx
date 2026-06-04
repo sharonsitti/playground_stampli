@@ -5,8 +5,8 @@ import App from '../src/App'
 
 afterEach(cleanup)
 
-// TODO: restore h1 assertion once BattleshipMockup is removed from App
-test.skip('renders the app', () => {
+test('renders the welcome screen on load', () => {
   render(<App />)
-  expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: 'BATTLESHIP' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled()
 })

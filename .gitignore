@@ -6,6 +6,9 @@ dist/
 *.tsbuildinfo
 coverage/
 
+# SQLite database (generated on startup)
+server/data/
+
 # Logs
 *.log
 
