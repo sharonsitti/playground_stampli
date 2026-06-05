@@ -70,7 +70,7 @@ The frontend coverage threshold is set to **5%** across all metrics (statements,
 
 | Team | Teammates | Agents at Peak | Issues Caught | Issues Fixed | Test Coverage | Time Elapsed |
 |------|-----------|----------------|---------------|--------------|---------------|--------------|
-| One    | 4         | 10             | 29            | 14           | 85%           | 1            |
+| One    | 4         | 10             | 29            | 14           | 85%           | 1 hour           |
 
 ## Retrospective
 
@@ -91,6 +91,7 @@ The frontend coverage threshold is set to **5%** across all metrics (statements,
 
 - **Naming collision was the biggest waste of time.** QA and PM each proposed tests for the same feature in separate conversations, and each independently numbered their lists B1–B5. When QA said "B2 is covered" and PM said "B2 is missing," they were talking about different tests. Neither noticed until several rounds in. Shared namespacing across agent conversations would have caught it immediately.
 - **The PM-QA loop generated too much noise.** The PM was rigorous — genuinely valuable — but produced high message volume: announcing a decision, making the decision, confirming the decision was made. Several times one decision arrived as three messages. The signal was good; the ratio was low.
+- **The UI didn't fully capture the mockup's richness.** The implemented UI is functional but lost some of the color depth and visual polish from the original mockup design. The screenshot was the source of truth, but agents interpreted it conservatively.
 - **The `max-lines` wall hit twice unexpectedly.** `LobbyScreen.test.tsx` and `App.tsx` both hit the ESLint complexity and line-count caps mid-development. Both were recoverable but added unplanned work. Agents should be briefed on these caps upfront so they design file structure with room to grow.
 
 ## What I'd do if I had more time
