@@ -40,10 +40,12 @@ const SHIP_NAMES = ['Carrier', 'Battleship', 'Cruiser', 'Submarine', 'Destroyer'
 // so match on the leading ship word. Grid cells are named by coordinate (e.g. "a1"), so this never
 // collides with the grid.
 function selectShip(user: ReturnType<typeof userEvent.setup>, name: string) {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- name is a controlled ship-type string, not user input
   return user.click(screen.getByRole('button', { name: new RegExp(`^${name}\\b`) }))
 }
 
 function paletteShip(name: string) {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- name is a controlled ship-type string, not user input
   return screen.queryByRole('button', { name: new RegExp(`^${name}\\b`) })
 }
 

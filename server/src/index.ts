@@ -5,9 +5,12 @@ import {
   CancelGameRequestSchema,
   PlaceShipsRequestSchema,
   ReadyRequestSchema,
+  ShotRequestSchema,
   PRESET_SECONDS,
   SHIP_SIZES,
+  type Cell,
   type ShipPlacement,
+  type ShipType,
 } from '@shared/schemas'
 import { getOccupiedCells } from '@shared/geometry'
 import express, { NextFunction, Request, Response } from 'express'
@@ -23,11 +26,13 @@ import {
   joinGame,
   markPlacementExpired,
   markPlayerReady,
+  setCurrentTurn,
   startBattle,
 } from './db/games.repository.js'
 import type { PlayerRow } from './db/players.repository.js'
 import { upsertPlayerByName } from './db/players.repository.js'
-import { getShips, upsertShips } from './db/ships.repository.js'
+import { getShips, markShipSunk, upsertShips } from './db/ships.repository.js'
+import { getShot, getShots, recordShot } from './db/shots.repository.js'
 import { addGameConnection, addLobbyConnection, emitGameEvent, emitLobbyEvent } from './sse.js'
 import { cancelTimer, startTimer } from './timer.js'
 
@@ -98,6 +103,81 @@ function validatePlacement(ships: ShipPlacement[]): string | null {
     }
   }
   return null
+}
+
+function opponentOf(game: GameRow, playerId: string): string {
+  return playerId === game.creator_id ? (game.joiner_id ?? '') : game.creator_id
+}
+
+interface ShotResult {
+  hit: boolean
+  sunk: boolean
+  ship_type: ShipType | null
+  ship_cells: Cell[] | null
+  opponentDefeated: boolean
+}
+
+function resolveShot(
+  gameId: string,
+  shooterId: string,
+  opponentId: string,
+  col: number,
+  row: number,
+): ShotResult {
+  const cellKey = (c: number, r: number) => `${String(c)},${String(r)}`
+  const target = cellKey(col, row)
+
+  const ships = getShips(gameId, opponentId)
+  const hitShip = ships.find((ship) =>
+    getOccupiedCells(ship).some((cell) => cellKey(cell.col, cell.row) === target),
+  )
+
+  recordShot(gameId, shooterId, col, row, hitShip !== undefined)
+
+  if (!hitShip) {
+    return { hit: false, sunk: false, ship_type: null, ship_cells: null, opponentDefeated: false }
+  }
+
+  const hits = new Set(
+    getShots(gameId, shooterId)
+      .filter((s) => s.hit === 1)
+      .map((s) => cellKey(s.col, s.row)),
+  )
+  const shipCells = getOccupiedCells(hitShip)
+  const sunk = shipCells.every((cell) => hits.has(cellKey(cell.col, cell.row)))
+
+  if (!sunk) {
+    return { hit: true, sunk: false, ship_type: null, ship_cells: null, opponentDefeated: false }
+  }
+
+  markShipSunk(hitShip.id)
+  const remaining = getShips(gameId, opponentId).filter((s) => s.sunk === 0).length
+  return {
+    hit: true,
+    sunk: true,
+    ship_type: hitShip.type,
+    ship_cells: shipCells,
+    opponentDefeated: remaining === 0,
+  }
+}
+
+function startTurnTimer(gameId: string, turnPlayerId: string, seconds: number): void {
+  startTimer(
+    gameId,
+    seconds,
+    (secondsRemaining) => {
+      emitGameEvent(gameId, 'timer_tick', { seconds_remaining: secondsRemaining })
+    },
+    () => {
+      const game = getGameById(gameId)
+      if (!game || game.status !== 'battle' || game.current_turn !== turnPlayerId) return
+      const nextTurn = opponentOf(game, turnPlayerId)
+      const updated = setCurrentTurn(gameId, nextTurn)
+      if (!updated) return
+      emitGameEvent(gameId, 'turn_expired', { player_id: turnPlayerId, next_turn: nextTurn })
+      startTurnTimer(gameId, nextTurn, seconds)
+    },
+  )
 }
 
 app.get('/health', (_req: Request, res: Response) => {
@@ -271,10 +351,72 @@ app.post('/api/games/:gameId/ready', (req: Request, res: Response) => {
         current_turn: started.creator_id,
         timer_seconds: PRESET_SECONDS[started.preset],
       })
+      startTurnTimer(gameId, started.creator_id, PRESET_SECONDS[started.preset])
     }
   }
 
   res.json({ ok: true })
+})
+
+app.post('/api/games/:gameId/shot', (req: Request, res: Response) => {
+  const gameId = gameIdParam(req)
+  const game = getGameById(gameId)
+  if (!game || game.status !== 'battle') {
+    res.status(409).json({ error: 'game is not in the battle phase' })
+    return
+  }
+
+  const parsed = ShotRequestSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'player_id, col, and row are required and must be in bounds' })
+    return
+  }
+  const { player_id, col, row } = parsed.data
+  if (player_id !== game.creator_id && player_id !== game.joiner_id) {
+    res.status(403).json({ error: 'player is not in this game' })
+    return
+  }
+  if (game.current_turn !== player_id) {
+    res.status(403).json({ error: 'not your turn' })
+    return
+  }
+
+  if (getShot(gameId, player_id, col, row)) {
+    res.status(400).json({ error: 'cell already fired' })
+    return
+  }
+
+  const opponentId = opponentOf(game, player_id)
+  const result = resolveShot(gameId, player_id, opponentId, col, row)
+
+  const nextTurn = result.opponentDefeated ? player_id : opponentId
+  if (!result.opponentDefeated) {
+    setCurrentTurn(gameId, nextTurn)
+  } else {
+    cancelTimer(gameId)
+  }
+
+  emitGameEvent(gameId, 'shot_fired', {
+    shooter_id: player_id,
+    col,
+    row,
+    hit: result.hit,
+    sunk: result.sunk,
+    ship_type: result.ship_type,
+    ship_cells: result.ship_cells,
+    next_turn: nextTurn,
+  })
+
+  if (!result.opponentDefeated) {
+    startTurnTimer(gameId, nextTurn, PRESET_SECONDS[game.preset])
+  }
+
+  res.json({
+    hit: result.hit,
+    sunk: result.sunk,
+    ship_type: result.ship_type,
+    ship_cells: result.ship_cells,
+  })
 })
 
 app.delete('/api/games/:gameId', (req: Request, res: Response) => {

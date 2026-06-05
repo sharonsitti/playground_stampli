@@ -27,6 +27,8 @@ const getShipsStmt = db.prepare<[string, string], ShipRow>(
   'SELECT id, game_id, player_id, type, orientation, origin_col, origin_row, sunk FROM ships WHERE game_id = ? AND player_id = ?',
 )
 
+const markShipSunkStmt = db.prepare<[string]>('UPDATE ships SET sunk = 1 WHERE id = ?')
+
 const replaceShips = db.transaction((gameId: string, playerId: string, ships: ShipPlacement[]) => {
   deleteShipsStmt.run(gameId, playerId)
   for (const ship of ships) {
@@ -48,4 +50,8 @@ export function upsertShips(gameId: string, playerId: string, ships: ShipPlaceme
 
 export function getShips(gameId: string, playerId: string): ShipRow[] {
   return getShipsStmt.all(gameId, playerId)
+}
+
+export function markShipSunk(shipId: string): void {
+  markShipSunkStmt.run(shipId)
 }

@@ -69,6 +69,10 @@ const finishPlacementStmt = db.prepare<[string]>(
   "UPDATE games SET status = 'finished', winner_id = NULL WHERE id = ? AND status = 'placing'",
 )
 
+const setCurrentTurnStmt = db.prepare<[string, string]>(
+  "UPDATE games SET current_turn = ? WHERE id = ? AND status = 'battle'",
+)
+
 export function createGame(creatorId: string, preset: Preset): GameRow {
   const id = randomUUID()
   insertGameStmt.run(id, preset, creatorId)
@@ -115,6 +119,11 @@ export function startBattle(gameId: string, firstTurn: string): GameRow | undefi
 
 export function markPlacementExpired(gameId: string): boolean {
   return finishPlacementStmt.run(gameId).changes > 0
+}
+
+export function setCurrentTurn(gameId: string, playerId: string): GameRow | undefined {
+  if (setCurrentTurnStmt.run(playerId, gameId).changes === 0) return undefined
+  return getByIdStmt.get(gameId)
 }
 
 export function getPlayerById(playerId: string): PlayerRow | undefined {

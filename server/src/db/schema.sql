@@ -31,3 +31,14 @@ CREATE TABLE IF NOT EXISTS ships (
   sunk INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_ships_game_player ON ships(game_id, player_id);
+
+CREATE TABLE IF NOT EXISTS shots (
+  id TEXT PRIMARY KEY,
+  game_id TEXT NOT NULL REFERENCES games(id),
+  player_id TEXT NOT NULL REFERENCES players(id),
+  col INTEGER NOT NULL,
+  row INTEGER NOT NULL,
+  hit INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shots_unique ON shots(game_id, player_id, col, row);
+CREATE INDEX IF NOT EXISTS idx_shots_game_player ON shots(game_id, player_id);

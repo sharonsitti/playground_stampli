@@ -4,14 +4,14 @@ import { type BattleStartEvent } from '@shared/schemas'
 import { PlacementGrid } from '@/components/PlacementGrid'
 import { ReadyButton } from '@/components/ReadyButton'
 import { ShipPalette } from '@/components/ShipPalette'
-import { usePlacement } from '@/hooks/usePlacement'
+import { usePlacement, type PlacedShip } from '@/hooks/usePlacement'
 import { usePlacementPhase } from '@/hooks/usePlacementPhase'
 import { formatTimer } from '@/lib/format'
 
 type PlacementScreenProps = {
   gameId: string
   playerId: string
-  onBattleStart: (event: BattleStartEvent) => void
+  onBattleStart: (event: BattleStartEvent, ships: PlacedShip[]) => void
   onExpired: () => void
 }
 
@@ -41,7 +41,13 @@ export function PlacementScreen({
 }: PlacementScreenProps) {
   const placement = usePlacement()
   const { rotate } = placement
-  const phase = usePlacementPhase({ gameId, playerId, onBattleStart })
+  const phase = usePlacementPhase({
+    gameId,
+    playerId,
+    onBattleStart: (event) => {
+      onBattleStart(event, placement.placed)
+    },
+  })
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

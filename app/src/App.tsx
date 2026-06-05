@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { type BattleStartEvent } from '@shared/schemas'
+import { BattleScreen } from '@/components/BattleScreen'
 import { LobbyScreen } from '@/components/LobbyScreen'
 import { PlacementScreen } from '@/components/PlacementScreen'
 import { WelcomeScreen, type Player } from '@/components/WelcomeScreen'
+import type { PlacedShip } from '@/hooks/usePlacement'
 
 type View = 'welcome' | 'lobby' | 'placement' | 'battle' | 'gameover'
 
@@ -30,6 +33,8 @@ export default function App() {
   const [view, setView] = useState<View>('welcome')
   const [player, setPlayer] = useState<Player | null>(loadStoredPlayer)
   const [gameId, setGameId] = useState<string | null>(null)
+  const [placedShips, setPlacedShips] = useState<PlacedShip[]>([])
+  const [firstTurn, setFirstTurn] = useState<string | null>(null)
 
   function handleRegistered(registered: Player) {
     sessionStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(registered))
@@ -42,7 +47,9 @@ export default function App() {
     setView('placement')
   }
 
-  function handleBattleStart() {
+  function handleBattleStart(event: BattleStartEvent, ships: PlacedShip[]) {
+    setPlacedShips(ships)
+    setFirstTurn(event.current_turn)
     setView('battle')
   }
 
@@ -72,7 +79,19 @@ export default function App() {
         <ViewPlaceholder label="Placement" />
       )
     case 'battle':
-      return <ViewPlaceholder label="Battle" />
+      return player && gameId && firstTurn ? (
+        <BattleScreen
+          gameId={gameId}
+          playerId={player.id}
+          firstTurn={firstTurn}
+          placedShips={placedShips}
+          onGameOver={() => {
+            // PR6 wires game-over navigation; PR5 holds state so the final shot renders.
+          }}
+        />
+      ) : (
+        <ViewPlaceholder label="Battle" />
+      )
     case 'gameover':
       return <ViewPlaceholder label="Game Over" />
   }
