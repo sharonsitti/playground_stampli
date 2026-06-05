@@ -21,6 +21,7 @@ Before writing any code, read `CLAUDE.md` to understand project layout, tech sta
 6. At any point, ask questions or raise concerns to teammates or the team lead to inform your work.
 
 ## Patterns to apply
+- **Reuse before you build** — before writing a new component or style, scan  for existing primitives and reuse installed shadcn/ui components and their existing class patterns
 - **TypeScript discriminated unions** — model the view state machine and game states with discriminated unions for exhaustive, type-safe handling
 - **`useOptimistic`** — show shot hit/miss immediately in the battle phase; let SSE confirm; never block the UI on a round-trip
 - **`useActionState` for forms** — use for player name entry and any form submission; replaces manual `useState` + handler boilerplate
@@ -30,6 +31,7 @@ Before writing any code, read `CLAUDE.md` to understand project layout, tech sta
 - **Composition over configuration** — extend components via children/render props rather than accumulating boolean flags like `isPlacementMode` or `isBattleMode`
 - **Generic vs. specific component separation** — keep base UI (e.g. `GridCell`) context-agnostic; let domain components (e.g. `BattleCell`) own game-specific logic
 - **Accessibility as default** — game board cells are interactive targets; include keyboard navigation and ARIA attributes from the start, not as a retrofit
+
 
 ## Anti-patterns to avoid
 - Applying state from HTTP response bodies — always wait for the SSE event (SSE is authoritative)
