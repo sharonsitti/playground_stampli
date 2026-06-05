@@ -32,7 +32,7 @@ import {
 import type { PlayerRow } from './db/players.repository.js'
 import { upsertPlayerByName } from './db/players.repository.js'
 import { getShips, markShipSunk, upsertShips } from './db/ships.repository.js'
-import { getShot, getShots, recordShot } from './db/shots.repository.js'
+import { getShots, hasShot, recordShot } from './db/shots.repository.js'
 import { addGameConnection, addLobbyConnection, emitGameEvent, emitLobbyEvent } from './sse.js'
 import { cancelTimer, startTimer } from './timer.js'
 
@@ -366,12 +366,11 @@ app.post('/api/games/:gameId/shot', (req: Request, res: Response) => {
     return
   }
 
-  const parsed = ShotRequestSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ error: 'player_id, col, and row are required and must be in bounds' })
+  const player_id: unknown = (req.body as { player_id?: unknown }).player_id
+  if (typeof player_id !== 'string' || player_id.length === 0) {
+    res.status(400).json({ error: 'player_id is required' })
     return
   }
-  const { player_id, col, row } = parsed.data
   if (player_id !== game.creator_id && player_id !== game.joiner_id) {
     res.status(403).json({ error: 'player is not in this game' })
     return
@@ -381,7 +380,13 @@ app.post('/api/games/:gameId/shot', (req: Request, res: Response) => {
     return
   }
 
-  if (getShot(gameId, player_id, col, row)) {
+  const parsed = ShotRequestSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'col and row are required and must be in bounds' })
+    return
+  }
+  const { col, row } = parsed.data
+  if (hasShot(gameId, player_id, col, row)) {
     res.status(400).json({ error: 'cell already fired' })
     return
   }

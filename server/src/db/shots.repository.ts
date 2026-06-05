@@ -12,7 +12,7 @@ export interface ShotRow {
 }
 
 const getShotStmt = db.prepare<[string, string, number, number], ShotRow>(
-  'SELECT id, game_id, player_id, col, row, hit FROM shots WHERE game_id = ? AND player_id = ? AND col = ? AND row = ?',
+  'SELECT 1 FROM shots WHERE game_id = ? AND player_id = ? AND col = ? AND row = ?',
 )
 
 const insertShotStmt = db.prepare<[string, string, string, number, number, number]>(
@@ -23,13 +23,8 @@ const getShotsStmt = db.prepare<[string, string], ShotRow>(
   'SELECT id, game_id, player_id, col, row, hit FROM shots WHERE game_id = ? AND player_id = ?',
 )
 
-export function getShot(
-  gameId: string,
-  playerId: string,
-  col: number,
-  row: number,
-): ShotRow | undefined {
-  return getShotStmt.get(gameId, playerId, col, row)
+export function hasShot(gameId: string, playerId: string, col: number, row: number): boolean {
+  return getShotStmt.get(gameId, playerId, col, row) !== undefined
 }
 
 export function recordShot(

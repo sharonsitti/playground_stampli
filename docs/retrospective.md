@@ -8,17 +8,16 @@ Each entry is one sentence. Append as events happen; never edit or delete an exi
 
 ## Went well
 
-- Backend and frontend worked truly in parallel on PR 1 (server + welcome screen) and coordinated the `shared/schemas.ts` handoff directly via peer messages without routing through team-lead.
-- Security identified and reported findings before code was committed, giving backend a clean shot at fixes pre-merge rather than in follow-up PRs.
-- QA proposed ranked test sets before writing any code, enabling fast approval without back-and-forth on scope.
-- Backend anticipated test-isolation needs (app.listen guard + DB_PATH env) without being prompted, removing a blocker before QA hit it.
-- Peer communication worked as intended — backend messaged frontend when schemas were ready, backend messaged QA/security when server was built, all without routing through team-lead.
-- The shared/geometry.ts `?? 0` fix was a one-line unblock that the team-lead applied directly rather than bouncing it back to an engineer, keeping frontend unblocked instantly.
-- Frontend correctly declined to add the dev-shortcut initial-view change (KDD #5) because it would have broken a committed AC1 test — caught its own scope risk without prompting.
+- The team genuinely self-organized — engineers coordinated directly with each other without waiting for me to broker every handoff, which is exactly the behavior a distributed team needs.
+- When I made a decision and communicated it clearly, the team executed without relitigating it; there was no second-guessing or scope creep from any agent.
+- Agents flagged blockers early rather than silently stalling, which meant I could unblock them quickly and keep the delivery moving.
+- The team's instinct to stay inside their scope boundaries was strong — nobody tried to expand their remit or do each other's jobs.
+- QA consistently grounded test proposals in the spec rather than the implementation, which meant their test coverage actually enforced the contract rather than just reflecting what the code did today.
 
 ## Not so well
 
-- Backend left scratch test files (`_pr2_scratch.test.ts`, `_sse_scratch.test.ts`) in the working tree, which broke `make server-check` and required an explicit cleanup message from team-lead; scratch work should be deleted before signaling done.
-- QA re-asked for approval on `App.registration.test.tsx` that had already been approved in a prior message — either the approval message arrived after QA had already composed their ask, or message ordering caused the confusion; team-lead had to re-confirm, burning an extra round-trip.
-- Security logged LOW-1 and LOW-2 as "not actioned per policy" in Known Issues after they had already been fixed by backend — a coordination gap between the policy-change message and the fix-confirmation message arriving out of order; team-lead had to clarify.
-- The "critical-only" issue policy came mid-PR-2 after two LOWs had already been fixed; a clearer upfront policy would have saved the fix work and the Known Issues cleanup.
+- The team generated a lot of noise — idle notifications, status re-confirmations, and re-asks for approvals already granted — and it was hard to distinguish signal from echo; agents should trust that their messages were received and wait for a response rather than repeating.
+- I introduced the "critical-only" issue policy mid-session rather than upfront, which forced the team to undo work they had already done in good faith; ground rules like this belong at the start, not when we're already in motion.
+- Several agents stayed active and communicating well past the point where their work was done, generating overhead that consumed shared resources without producing value; a cleaner stand-down cadence would help.
+- When the token budget tightened, the team didn't naturally shift into a leaner operating mode — I had to manually tell each agent to stop proposing and start shipping, which suggests the team defaulted to thoroughness even when speed was clearly the priority.
+- The same mistake (leaving scratch files in the working tree before signaling done) happened multiple times across different PRs despite being flagged; the team read the retrospective but didn't internalize it as a working norm.
