@@ -806,7 +806,20 @@ Each PR is a **vertical slice**: it delivers a complete, working capability a re
 **Satisfies:** F8 AC1–5 · F8 AC6 *(by construction — must not regress)* · F9 AC1–2 *(counters incremented)*
 
 ---
+## Decision Records
 
-## Open Questions
+Numbered log of key decisions made by agents during implementation. Entries are appended in chronological order of discovery.
 
-_None — all decisions have been resolved in conversation. The spec is ready for implementation._
+| # | Agent | Problem Statement | Severity | Decision | Tradeoffs | Approved |
+|---|---|---|---|---|---|---|
+| — | — | No records yet | — | — | — | — |
+
+---
+
+## Known Issues
+
+Numbered log of known bugs and defects discovered during implementation. Entries are appended in chronological order of discovery.
+
+| # | Title | Agent | Severity | Problem Statement | How to Reproduce | Status |
+|---|---|---|---|---|---|---|
+| — | — | — | — | No issues yet | — | — |
