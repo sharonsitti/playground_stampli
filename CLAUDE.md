@@ -179,3 +179,5 @@ Global skills available (from `~/.claude/skills/` or plugin registry):
 3. **`server/tsconfig.json`** — add to `compilerOptions.paths`: `"@shared/*": ["../shared/*"]`; also register `tsconfig-paths` with tsx so path aliases resolve at runtime (pass `-r tsconfig-paths/register` or equivalent)
 
 Import as `import { Foo } from '@shared/schemas'` on both sides. Never use relative `../../shared` imports in source files.
+
+**Third-party deps in `shared/`:** `shared/` has no `node_modules`. Any bare third-party import inside `shared/*.ts` (currently `zod`) must be aliased to each side's own installed copy. If you add a new third-party import to a `shared/` file, add a one-line alias on ALL THREE of: `server/tsconfig.json paths`, `app/tsconfig.json paths`, and `app/vite.config.ts resolve.alias`.

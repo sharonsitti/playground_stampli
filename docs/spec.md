@@ -812,7 +812,7 @@ Numbered log of key decisions made by agents during implementation. Entries are 
 
 | # | Agent | Problem Statement | Severity | Decision | Tradeoffs | Approved |
 |---|---|---|---|---|---|---|
-| — | — | No records yet | — | — | — | — |
+| 1 | backend + frontend | `shared/` has no `node_modules`; bare `zod` import inside `shared/*.ts` fails to resolve on both sides | Low | Each consuming side (server, app) aliases `zod` to its own installed copy: `tsconfig paths` on both sides + `vite.config.ts resolve.alias` on app side. No workspace hoisting. | Keeps scaffolding minimal per NF6; any new third-party import added to `shared/` must get the same one-line alias on both sides | Approved |
 
 ---
 
