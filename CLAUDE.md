@@ -20,7 +20,7 @@ app/                   React frontend
   vite.config.ts       Vite + Tailwind CSS v4 config
 docs/                  Product/technical context — source of truth for behavior
 .claude/
-  skills/              Project-local Claude skills (make-pr)
+  skills/              Project-local Claude skills
   hooks/               PostToolUse hooks (frontend-check.sh)
   settings.json        Permissions, hooks, enabled plugins
 .github/               CI workflows (client-ci on every PR)
@@ -147,11 +147,7 @@ Pre-approved without a prompt:
 
 ## Skills
 
-Project-local skills live in `.claude/skills/`. Invoke when the user's request matches the trigger:
-
-- **`make-pr`** — opens or refreshes a GitHub PR for the current branch via `gh`. Use for "make a PR", "/make-pr", "update the PR". Pushes the branch and submits without further confirmation.
-
-Global skills also available (from `~/.claude/skills/` or plugin registry):
+Global skills available (from `~/.claude/skills/` or plugin registry):
 - **`frontend-design`** — polished, production-grade component/page generation.
 - **`verify`** — runs the app and confirms a change works end-to-end.
 - **`simplify`** — reviews changed code for quality and fixes issues found.
