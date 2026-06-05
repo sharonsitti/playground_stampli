@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { LobbyScreen } from '@/components/LobbyScreen'
 import { PlacementScreen } from '@/components/PlacementScreen'
 import { WelcomeScreen, type Player } from '@/components/WelcomeScreen'
-import type { PlacedShip } from '@/hooks/usePlacement'
 
 type View = 'welcome' | 'lobby' | 'placement' | 'battle' | 'gameover'
 
@@ -30,6 +29,7 @@ function ViewPlaceholder({ label }: { label: string }) {
 export default function App() {
   const [view, setView] = useState<View>('welcome')
   const [player, setPlayer] = useState<Player | null>(loadStoredPlayer)
+  const [gameId, setGameId] = useState<string | null>(null)
 
   function handleRegistered(registered: Player) {
     sessionStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(registered))
@@ -37,12 +37,18 @@ export default function App() {
     setView('lobby')
   }
 
-  function handleJoinPlacement(_gameId: string) {
+  function handleJoinPlacement(joinedGameId: string) {
+    setGameId(joinedGameId)
     setView('placement')
   }
 
-  function handleReady(_ships: PlacedShip[]) {
+  function handleBattleStart() {
     setView('battle')
+  }
+
+  function handleExpired() {
+    setGameId(null)
+    setView('lobby')
   }
 
   switch (view) {
@@ -55,7 +61,16 @@ export default function App() {
         <WelcomeScreen onRegistered={handleRegistered} />
       )
     case 'placement':
-      return <PlacementScreen onReady={handleReady} />
+      return player && gameId ? (
+        <PlacementScreen
+          gameId={gameId}
+          playerId={player.id}
+          onBattleStart={handleBattleStart}
+          onExpired={handleExpired}
+        />
+      ) : (
+        <ViewPlaceholder label="Placement" />
+      )
     case 'battle':
       return <ViewPlaceholder label="Battle" />
     case 'gameover':

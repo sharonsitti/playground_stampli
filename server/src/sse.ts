@@ -3,6 +3,7 @@ import type { Response } from 'express'
 const lobbyConnections = new Set<Response>()
 const gameConnections = new Map<string, Set<Response>>()
 const lastPlayerJoined = new Map<string, unknown>()
+const lastTimerTick = new Map<string, unknown>()
 
 function writeEvent(res: Response, type: string, data: unknown): void {
   try {
@@ -47,12 +48,14 @@ export function addGameConnection(gameId: string, res: Response): void {
   const replay = lastPlayerJoined.get(gameId)
   if (replay) {
     writeEvent(res, 'player_joined', replay)
-    writeEvent(res, 'timer_tick', { seconds_remaining: 0 })
+    const tick = lastTimerTick.get(gameId)
+    if (tick) writeEvent(res, 'timer_tick', tick)
   }
 }
 
 export function emitGameEvent(gameId: string, type: string, data: unknown): void {
   if (type === 'player_joined') lastPlayerJoined.set(gameId, data)
+  if (type === 'timer_tick') lastTimerTick.set(gameId, data)
   const set = gameConnections.get(gameId)
   if (!set) return
   for (const res of set) {

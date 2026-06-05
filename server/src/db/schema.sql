@@ -19,3 +19,15 @@ CREATE TABLE IF NOT EXISTS games (
   joiner_ready INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
+
+CREATE TABLE IF NOT EXISTS ships (
+  id TEXT PRIMARY KEY,
+  game_id TEXT NOT NULL REFERENCES games(id),
+  player_id TEXT NOT NULL REFERENCES players(id),
+  type TEXT NOT NULL,
+  orientation TEXT NOT NULL,
+  origin_col INTEGER NOT NULL,
+  origin_row INTEGER NOT NULL,
+  sunk INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_ships_game_player ON ships(game_id, player_id);

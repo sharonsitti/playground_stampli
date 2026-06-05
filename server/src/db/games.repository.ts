@@ -53,6 +53,22 @@ const joinGameStmt = db.prepare<[string, string]>(
 
 const deleteGameStmt = db.prepare<[string]>("DELETE FROM games WHERE id = ? AND status = 'waiting'")
 
+const setCreatorReadyStmt = db.prepare<[string]>(
+  "UPDATE games SET creator_ready = 1 WHERE id = ? AND status = 'placing'",
+)
+
+const setJoinerReadyStmt = db.prepare<[string]>(
+  "UPDATE games SET joiner_ready = 1 WHERE id = ? AND status = 'placing'",
+)
+
+const startBattleStmt = db.prepare<[string, string]>(
+  "UPDATE games SET status = 'battle', current_turn = ? WHERE id = ? AND status = 'placing'",
+)
+
+const finishPlacementStmt = db.prepare<[string]>(
+  "UPDATE games SET status = 'finished', winner_id = NULL WHERE id = ? AND status = 'placing'",
+)
+
 export function createGame(creatorId: string, preset: Preset): GameRow {
   const id = randomUUID()
   insertGameStmt.run(id, preset, creatorId)
@@ -84,6 +100,21 @@ export function joinGame(gameId: string, joinerId: string): GameRow | undefined 
 
 export function cancelGame(gameId: string): boolean {
   return deleteGameStmt.run(gameId).changes > 0
+}
+
+export function markPlayerReady(gameId: string, isCreator: boolean): GameRow | undefined {
+  const stmt = isCreator ? setCreatorReadyStmt : setJoinerReadyStmt
+  if (stmt.run(gameId).changes === 0) return undefined
+  return getByIdStmt.get(gameId)
+}
+
+export function startBattle(gameId: string, firstTurn: string): GameRow | undefined {
+  if (startBattleStmt.run(firstTurn, gameId).changes === 0) return undefined
+  return getByIdStmt.get(gameId)
+}
+
+export function markPlacementExpired(gameId: string): boolean {
+  return finishPlacementStmt.run(gameId).changes > 0
 }
 
 export function getPlayerById(playerId: string): PlayerRow | undefined {
