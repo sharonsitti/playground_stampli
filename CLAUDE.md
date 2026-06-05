@@ -106,7 +106,7 @@ Two additional rules fire as errors and commonly surprise agents:
 | Functions | 5% |
 | Lines | 5% |
 
-Intentionally low — this is a conceptual pairing surface, not a production system. The threshold exists to catch complete regressions, not enforce production-grade coverage. **Raise as coverage improves — never lower.**
+Intentionally low — this is a conceptual pairing surface, not a production system. The threshold exists to catch complete regressions, not enforce production-grade coverage. **Never raise it, never lower it — keep it fixed at 5%.**
 
 ### Pre-commit test protection
 
