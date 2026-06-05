@@ -6,7 +6,7 @@ export function getOccupiedCells(ship: {
   origin_col: number;
   origin_row: number;
 }): Array<{ col: number; row: number }> {
-  const size = SHIP_SIZES[ship.type];
+  const size = SHIP_SIZES[ship.type] ?? 0;
   const cells: Array<{ col: number; row: number }> = [];
   for (let i = 0; i < size; i++) {
     cells.push({

@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { LobbyScreen } from '@/components/LobbyScreen'
+import { PlacementScreen } from '@/components/PlacementScreen'
 import { WelcomeScreen, type Player } from '@/components/WelcomeScreen'
+import type { PlacedShip } from '@/hooks/usePlacement'
 
 type View = 'welcome' | 'lobby' | 'placement' | 'battle' | 'gameover'
 
@@ -34,13 +37,25 @@ export default function App() {
     setView('lobby')
   }
 
+  function handleJoinPlacement(_gameId: string) {
+    setView('placement')
+  }
+
+  function handleReady(_ships: PlacedShip[]) {
+    setView('battle')
+  }
+
   switch (view) {
     case 'welcome':
       return <WelcomeScreen onRegistered={handleRegistered} />
     case 'lobby':
-      return <ViewPlaceholder label={`Lobby (${player?.name ?? 'unknown'})`} />
+      return player ? (
+        <LobbyScreen player={player} onJoinPlacement={handleJoinPlacement} />
+      ) : (
+        <WelcomeScreen onRegistered={handleRegistered} />
+      )
     case 'placement':
-      return <ViewPlaceholder label="Placement" />
+      return <PlacementScreen onReady={handleReady} />
     case 'battle':
       return <ViewPlaceholder label="Battle" />
     case 'gameover':
