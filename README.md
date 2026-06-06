@@ -57,26 +57,18 @@ I designed a [spec](./docs/spec.md) that anticipates where agents are likely to 
 
 I built a harness that includes instructions and guardrails so that agents can't drift from requirements and quality standards.
 
-**Deterministic guardrails** 
-- **PostToolUse hooks** — fire automatically after every file edit so issues are caught immediately rather than piling up until CI runs. Style and formatting problems are silently corrected in place; type errors are surfaced back to the agent as a hard block so it can fix them before moving on:
-  - [`frontend-check.sh`](./.claude/hooks/frontend-check.sh) — covers frontend source files
-  - [`server-check.sh`](./.claude/hooks/server-check.sh) — covers server source files
-- **Pre-commit hook** ([`.githooks/pre-commit`](./.githooks/pre-commit)) — fires on every `git commit` and runs lint, type-checking, and the full test suite on both frontend and server before the commit is allowed through. This ensures no broken or failing code ever enters the repo.
-- **Test integrity rule** — agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test. This rule is enforced using a pre-commit hook that surfaces staged changes to a committed test file and blocks the commit. The team-lead reviews the changes and makes a judgement call whether the code or the tests were broken. Lead signs-off (`ALLOW_TEST_CHANGES=1`) to proceed with changing test files, or push back to engineers to fix an actual code issue.
+- [**Claude Hooks**](./.claude/settings.json) — fire automatically after every file edit so issues are caught immediately rather than piling up until CI runs. Style and formatting problems are silently corrected in place; type errors are surfaced back to the agent as a hard block so it can fix them before moving on.
+- [**Pre-commit hook**](./.githooks/pre-commit) — fires on every `git commit` and runs lint, type-checking, and the full test suite on both frontend and server before the commit is allowed through. This ensures no broken or failing code ever enters the repo.
+- [**Test integrity rule**](./.githooks/pre-commit) — agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test. This rule is enforced using a pre-commit hook that surfaces staged changes to a committed test file and blocks the commit. The team-lead reviews the changes and makes a judgement call whether the code or the tests were broken. Lead signs-off (`ALLOW_TEST_CHANGES=1`) to proceed with changing test files, or push back to engineers to fix an actual code issue.
 
-**Non-deterministic compass** 
-- **Specs** — the source of truth the agents worked from, and where most of the human judgment in this project was concentrated:
-  - [`docs/spec.md`](./docs/spec.md) — requirements, data models, API contracts, key user flows, design decisions, and PR slicing
-  - [`docs/battleship-design-system.md`](./docs/battleship-design-system.md) — color tokens, typography, component specs, and per-screen layout for every UI state
-  - [`docs/battleship-ui-mockup.png`](./docs/battleship-ui-mockup.png) — annotated visual reference; the screenshot is the source of truth for UI and experience
 - **Instruction prompts** — loaded automatically at the start of every session so agents are never starting cold:
-  - [`CLAUDE.md`](./CLAUDE.md) — project-wide context: repo layout, tech stack, house style, conventions
-  - [`.claude/agents/team-lead.md`](./.claude/agents/team-lead.md) — orchestrates agents, parallelizes work, owns commits and PRs, and is the final decision-maker on any cross-cutting call
-  - [`.claude/agents/backend-engineer.md`](./.claude/agents/backend-engineer.md) — implements and reviews all server-side code: Express routes, SQLite schema, and repository layer
-  - [`.claude/agents/frontend-engineer.md`](./.claude/agents/frontend-engineer.md) — implements and reviews all client-side code: React components, state management, and Tailwind styling
-  - [`.claude/agents/product-manager.md`](./.claude/agents/product-manager.md) — guards scope, validates delivery against the spec's acceptance criteria, and blocks sign-off when requirements aren't fully met
-  - [`.claude/agents/qa-engineer.md`](./.claude/agents/qa-engineer.md) — writes tests derived from the spec and user flows, not the implementation, to ensure the suite enforces the product contract
-  - [`.claude/agents/security-engineer.md`](./.claude/agents/security-engineer.md) — reviews PRs for OWASP Top 10 vulnerabilities, SQL injection, XSS, and input validation gaps across the full stack
+  - [CLAUDE.md](./CLAUDE.md) — project-wide context: repo layout, tech stack, house style, conventions
+  - [Team Lead](./.claude/agents/team-lead.md) — orchestrates agents, parallelizes work, owns commits and PRs, and is the final decision-maker on any cross-cutting call
+  - [Backend Engineer](./.claude/agents/backend-engineer.md) — implements and reviews all server-side code: Express routes, SQLite schema, and repository layer
+  - [Frontend Engineer](./.claude/agents/frontend-engineer.md) — implements and reviews all client-side code: React components, state management, and Tailwind styling
+  - [Product Manager](./.claude/agents/product-manager.md) — guards scope, validates delivery against the spec's acceptance criteria, and blocks sign-off when requirements aren't fully met
+  - [QA Engineer](./.claude/agents/qa-engineer.md) — writes tests derived from the spec and user flows, not the implementation, to ensure the suite enforces the product contract
+  - [Security Engineer](./.claude/agents/security-engineer.md) — reviews PRs for OWASP Top 10 vulnerabilities, SQL injection, XSS, and input validation gaps across the full stack
 
 
 ## Test coverage
