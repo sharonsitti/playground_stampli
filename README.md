@@ -57,7 +57,7 @@ I designed a [spec](./docs/spec.md) that anticipates where agents are likely to 
 
 I built a harness that includes instructions and guardrails so that agents can't drift from requirements and quality standards.
 
-- [**Claude Hooks**](./.claude/settings.json) — run after every file edit, before the agent moves on. Formatting is auto-corrected silently; type errors are surfaced as a hard block the agent must resolve before continuing.
+- [**Claude Hooks**](./.claude/settings.json) — run after every file edit, before the agent moves on. Rules are enforced as hard blocks: strict TypeScript type checking, React hook dependency exhaustion, complexity caps on file size, function length, and branching depth and more.
 - [**Pre-commit hook**](./.githooks/pre-commit) — runs lint, type-checking, and the full test suite on every `git commit`. Broken or failing code cannot enter the repo.
 - [**Test coverage**](./app/vite.config.ts) — frontend test coverage is enforced at 5% across all metrics. Intentionally low — this is a conceptual example, not a production system. 
 
@@ -75,8 +75,40 @@ I built a harness that includes instructions and guardrails so that agents can't
 - [**Team Lead authority**](./.claude/agents/team-lead.md) — the Team Lead is the final decision-maker on all open questions. Any dispute that hasn't converged within 5 turns gets decided by the Team Lead; debates don't spiral.
 - [**Commit and push gate**](./.claude/agents/team-lead.md) — the Team Lead is the only agent permitted to commit and push. Each push is their sign-off that the full PR cycle has concluded.
 - [**Product Manager authority**](./.claude/agents/product-manager.md) — new scope is never silently absorbed; it gets explicitly evaluated or it doesn't happen. The PM blocks sign-off on any feature that doesn't fully match the spec.
-- [**Decision Records**](./.claude/agents/product-manager.md) — spec gaps are recorded and only if the gap is genuine, unavoidable, and resolved at the simplest level. Not confirmed until the Team Lead agrees.
-- [**Known Issues**](./.claude/agents/product-manager.md) — only **critical** issues are fixed in the current cycle. Everything else is deferred.
+- [**Decision Records**](./docs/spec.md#decision-records) — spec gaps are recorded and only if the gap is genuine, unavoidable, and resolved at the simplest level. Not confirmed until the Team Lead agrees.
+- [**Known Issues**](./docs/spec.md#known-issues) — only **critical** issues are fixed in the current cycle. Everything else is deferred.
 - [**Contract-driven tests**](./.claude/agents/qa-engineer.md) — tests assert the spec, not the code. The QA engineer never reads the implementation to decide what to assert. The PM verifies all tests map back to Acceptance Criteria before sign-off.
 - [**Test integrity rule**](./.githooks/pre-commit) — agents may add new tests but may never modify or delete a committed test. A failing test means the code is wrong, not the test. The pre-commit hook blocks any staged change to a committed test file; only the Team Lead can sign off (`ALLOW_TEST_CHANGES=1`) after reviewing whether the test or the code was at fault.
 - **No architect or devil's advocate personas** — the spec is closed and final. Personas that explore alternatives and tradeoffs belong in discovery work; this team is executing a written spec, not designing one. 
+
+## Benchmarking 
+
+I fed the same spec to three teams and tweaked the harness between sessions:
+
+
+| Team | Personas | Teammates at Peak | Issues Caught | Issues Fixed | Test Coverage | Time Elapsed |
+|------|-----------|----------------|---------------|--------------|---------------|--------------|
+| First    | 4         | 10             | 29            | 14           | 85%           | 1 hour           |
+| Second    | 6         | 6             | 8            | 8           | 85%           | 1 hour           |
+| Third    | 6         | 3             | 4            | 4           | ~10%           | 30 minutes           |
+
+
+## Retrospective
+
+### First Team 
+This was my first trial run for Claude Code experimental teams feature. I used automatically generated teammates with default instructions. Left out Team Lead Security Engineer personas.
+
+**Went well:**
+- **Code review caught real bugs** — every pass found behavioral bugs, such as: server connection restarted on every render; game-ending shot briefly told the loser it was their turn.
+- **The PM earned their role** — rejected a test that would fail against correct code; refused three tautological persistence tests that reimplemented the DB logic inside the test; caught two missing integration tests the Team Lead had signed off as covered.
+- **Unprompted mutation testing** — the team broke production code to confirm tests went red — without being asked explicitly. 
+
+**Not so well:**
+- **Agent chatter** — The PM–QA loop in particular generated noise: announcing a decision, making the decision, confirming the decision was made. Several times one decision arrived as three separate messages. 
+- **Low UI fidelity** — the implemented UI is functional but lost color depth and visual polish from the original mockup. The problem was that a screenshot was the source of truth, which agents struggled to interpret.
+
+**Outcome:** The team delivered a working Battleship game with low fidelity to the UI mock. Test coverage was high as well as issues discovered mid development.
+
+**Cost:** High - Session tokens exhaused 
+
+## High Level Design
