@@ -177,3 +177,11 @@ export const TurnExpiredEvent = z.object({
   next_turn: z.string(),
 });
 export type TurnExpiredEvent = z.infer<typeof TurnExpiredEvent>;
+
+export const GameOverEvent = z.object({
+  winner_id: z.string(),
+  loser_id: z.string(),
+  winner: PlayerResponse,
+  loser: PlayerResponse,
+});
+export type GameOverEvent = z.infer<typeof GameOverEvent>;

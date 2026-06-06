@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import {
   BattleStartEvent,
+  GameOverEvent,
   PlacementExpiredEvent,
   PlayerJoinedEvent,
   PlayerReadyEvent,
@@ -19,6 +20,7 @@ export type GameSSECallbacks = {
   onPlacementExpired?: () => void
   onShotFired?: (data: ShotFiredEvent) => void
   onTurnExpired?: (data: TurnExpiredEvent) => void
+  onGameOver?: (data: GameOverEvent) => void
 }
 
 export function useGameSSE(gameId: string | null, callbacks: GameSSECallbacks): void {
@@ -66,6 +68,11 @@ export function useGameSSE(gameId: string | null, callbacks: GameSSECallbacks): 
     source.addEventListener('turn_expired', (event: MessageEvent<string>) => {
       const data = TurnExpiredEvent.parse(JSON.parse(event.data) as unknown)
       callbacksRef.current.onTurnExpired?.(data)
+    })
+
+    source.addEventListener('game_over', (event: MessageEvent<string>) => {
+      const data = GameOverEvent.parse(JSON.parse(event.data) as unknown)
+      callbacksRef.current.onGameOver?.(data)
     })
 
     return () => {

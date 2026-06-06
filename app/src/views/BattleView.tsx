@@ -1,3 +1,4 @@
+import type { GameOverEvent } from '@shared/schemas'
 import type { PlacedShip } from '@/views/placement/usePlacement'
 import { BattleBanner } from './battle/BattleBanner'
 import { BattleNotifications } from './battle/BattleNotifications'
@@ -10,11 +11,12 @@ type BattleViewProps = {
   playerId: string
   placedShips: PlacedShip[]
   role: 'creator' | 'joiner'
+  onGameOver: (data: GameOverEvent) => void
 }
 
-export function BattleView({ gameId, playerId, placedShips, role }: BattleViewProps) {
+export function BattleView({ gameId, playerId, placedShips, role, onGameOver }: BattleViewProps) {
   const initialTurn = role === 'creator' ? playerId : null
-  const battle = useBattle(gameId, playerId, initialTurn)
+  const battle = useBattle(gameId, playerId, initialTurn, onGameOver)
 
   return (
     <div className="bg-background min-h-screen">

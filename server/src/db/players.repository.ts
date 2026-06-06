@@ -15,6 +15,12 @@ interface PlayerRow {
 const insertStmt = db.prepare('INSERT OR IGNORE INTO players (id, name) VALUES (?, ?)')
 const selectStmt = db.prepare('SELECT * FROM players WHERE name = ?')
 const selectByIdStmt = db.prepare('SELECT * FROM players WHERE id = ?')
+const incrementWinStmt = db.prepare(
+  'UPDATE players SET wins = wins + 1, games_played = games_played + 1 WHERE id = ?',
+)
+const incrementLossStmt = db.prepare(
+  'UPDATE players SET losses = losses + 1, games_played = games_played + 1 WHERE id = ?',
+)
 
 function toResponse(row: PlayerRow): PlayerResponse {
   return {
@@ -31,4 +37,12 @@ export function upsertPlayer(name: string): PlayerResponse {
 export function getPlayerById(id: string): PlayerResponse | null {
   const row = selectByIdStmt.get(id) as PlayerRow | undefined
   return row ? toResponse(row) : null
+}
+
+export function incrementWin(playerId: string): void {
+  incrementWinStmt.run(playerId)
+}
+
+export function incrementLoss(playerId: string): void {
+  incrementLossStmt.run(playerId)
 }

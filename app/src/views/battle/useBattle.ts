@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ShotFiredEvent, TurnExpiredEvent } from '@shared/schemas'
+import type { GameOverEvent, ShotFiredEvent, TurnExpiredEvent } from '@shared/schemas'
 import { useGameSSE } from '@/hooks/useGameSSE'
 import { ConflictError, fireShot } from '@/lib/api'
 
@@ -31,7 +31,12 @@ const SHIP_LABELS: Record<string, string> = {
 
 const key = (col: number, row: number) => `${String(col)},${String(row)}`
 
-export function useBattle(gameId: string, playerId: string, initialTurn: string | null): Battle {
+export function useBattle(
+  gameId: string,
+  playerId: string,
+  initialTurn: string | null,
+  onGameOver: (data: GameOverEvent) => void,
+): Battle {
   const [currentTurn, setCurrentTurn] = useState<string | null>(initialTurn)
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null)
   const [myShots, setMyShots] = useState<Shot[]>([])
@@ -93,6 +98,7 @@ export function useBattle(gameId: string, playerId: string, initialTurn: string 
     },
     onShotFired,
     onTurnExpired,
+    onGameOver,
   })
 
   const fired = new Set(myShots.map((s) => key(s.col, s.row)))

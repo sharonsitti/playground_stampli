@@ -4,6 +4,7 @@ import {
   DeleteGameResponse,
   FireShotRequest,
   FireShotResponse,
+  GameOverEvent,
   JoinGameRequest,
   JoinGameResponse,
   OkResponse,
@@ -16,6 +17,7 @@ import { Router, type Request, type Response } from 'express'
 import {
   deleteGame,
   expirePlacement,
+  finishGame,
   type GameRow,
   getGame,
   joinGame,
@@ -23,7 +25,7 @@ import {
   startBattle,
   updateCurrentTurn,
 } from '../db/games.repository.js'
-import { getPlayerById } from '../db/players.repository.js'
+import { getPlayerById, incrementLoss, incrementWin } from '../db/players.repository.js'
 import { getShipAtCell, getShips, markShipSunk, savePlacement } from '../db/ships.repository.js'
 import { hasShot, getShots, recordShot } from '../db/shots.repository.js'
 import { broadcastGame, broadcastLobby, gameClients, openStream, sendEvent } from '../sse.js'
@@ -317,7 +319,19 @@ gamesRouter.post('/api/games/:gameId/shot', (req: Request, res: Response) => {
     next_turn: nextTurn,
   })
 
-  if (!opponentSunk) {
+  if (opponentSunk) {
+    clearTimer(gameId)
+    finishGame(gameId, player_id)
+    incrementWin(player_id)
+    incrementLoss(opponentId)
+    const winner = getPlayerById(player_id)
+    const loser = getPlayerById(opponentId)
+    broadcastGame(
+      gameId,
+      'game_over',
+      GameOverEvent.parse({ winner_id: player_id, loser_id: opponentId, winner, loser }),
+    )
+  } else {
     clearTimer(gameId)
     startTurnTimer({ ...game, current_turn: nextTurn })
   }

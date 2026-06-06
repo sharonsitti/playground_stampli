@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import type { GameOverEvent } from '@shared/schemas'
 import { WelcomeView } from '@/views/WelcomeView'
 import { LobbyView } from '@/views/LobbyView'
 import { PlacementView } from '@/views/PlacementView'
 import { BattleView } from '@/views/BattleView'
+import { GameOverView } from '@/views/GameOverView'
 import type { PlacedShip } from '@/views/placement/usePlacement'
 
 type View = 'welcome' | 'lobby' | 'placement' | 'battle' | 'gameover'
@@ -18,6 +20,7 @@ export default function App() {
   const [game, setGame] = useState<GameContext | null>(null)
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([])
   const [expiredNotice, setExpiredNotice] = useState(false)
+  const [gameOverData, setGameOverData] = useState<GameOverEvent | null>(null)
 
   switch (view) {
     case 'welcome':
@@ -89,9 +92,24 @@ export default function App() {
           playerId={player.id}
           placedShips={placedShips}
           role={game.role}
+          onGameOver={(data) => {
+            setGameOverData(data)
+            setView('gameover')
+          }}
         />
       )
     case 'gameover':
-      return <div>Game Over (coming soon)</div>
+      if (!player || !gameOverData) return null
+      return (
+        <GameOverView
+          playerId={player.id}
+          winner={gameOverData.winner}
+          loser={gameOverData.loser}
+          onReturnToLobby={() => {
+            setGameOverData(null)
+            setView('lobby')
+          }}
+        />
+      )
   }
 }
