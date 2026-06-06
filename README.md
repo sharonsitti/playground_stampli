@@ -2,7 +2,7 @@
 
 A two-player Battleship game built as a full-stack web app. Two players open the app in separate browser tabs, place their fleets, and take turns firing shots until one fleet is destroyed.
 
-The entire game was implemented by a team of autonomous AI agents working from a written spec, with no human writing application code or delegating work. 
+The entire game was implemented by a team of autonomous AI agents working from a written spec without human supervision.
 
 ## What's included
 
@@ -42,23 +42,19 @@ Autonomous agent teams have known failure modes:
 - **Coordination divergence** — teammates make incompatible assumptions and deliver the wrong outcome
 - **Code slop** — without enforced standards, agents produce code that passes but ignores style rules, type safety, and coding conventions
 
-My approach addresses these with two layers: 
-- **Spec driven development** structured to eliminate coordination ambiguity
-- **AI harness** that enforces quality guardlrails automatically. 
-
-Together, they replace human supervision.
+My approach uses a spec and a harness working in tandem. Together, they address the failure modes above without human supervision.
 
 ---
 
 ### Spec Driven Development
-A good spec for autonomous teams anticipates where agents are likely to spiral, diverge, or backtrack and removes the ambiguity:
+I designed a spec that anticipates where agents are likely to spiral, diverge, or backtrack and removed the ambiguity:
 
 - **Schema as binding contract.** Parallel agents can diverge on data shapes: one assumes a field exists, another never adds it. Defining every schema in the spec as a source of truth means there's no drift in what gets built or how it connects.
 - **PR decomposition.** Without a bounded scope, agents over-build and absorb work they weren't asked to do. Slicing the spec into explicit PRs before coding begins gives each agent a clear unit of work — one vertical slice of user value, never boilerplate detached from a requirement. Each PR builds on the last in dependency order, so there's nothing to coordinate and nothing to guess mid-development.
 
 ### AI Harness
 
-Autonomous agents produce good work when squeezed from two directions: instructions tell them what to build and why; guardrails ensure they can't stray too far while doing it.
+I built a harness that includes instructions and guardrails so that agents can't drift from requirements and quality standards.
 
 **Deterministic guardrails** 
 - **PostToolUse hooks** — fire automatically after every file edit so issues are caught immediately rather than piling up until CI runs. Style and formatting problems are silently corrected in place; type errors are surfaced back to the agent as a hard block so it can fix them before moving on:
