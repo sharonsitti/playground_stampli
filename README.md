@@ -137,7 +137,7 @@ First trial run using Claude Code's experimental teams feature. Used automatical
 - **The PM blocking sign-off is genuinely useful.** It caught real bugs before code shipped — not just process theater.
 - **Agent chatter is hard to fix.** Both Team 1 and Team 2 had agents announcing decisions, making them, then confirming they were made. Personas alone didn't solve it.
 - **Enforced rules beat written rules.** The test integrity hook had zero violations. The same rule as policy would have been negotiated around.
-- **Token pressure causes shortcuts.** When Team 3 ran low, the Team Lead skipped code review to conserve runway. The tradeoff was real and visible.
+- **Token pressure causes shortcuts.** When Team 3 ran low on token budget, the Team Lead skipped code review to conserve runway. 
 - **Agents read markdown better than screenshots.** Team 1 had low UI fidelity when a screenshot was the only visual reference. Adding a design system in markdown — with explicit color tokens, spacing rules, and component specs — gave agents something they could actually reason from. The screenshot became a supplement, not the source of truth.
 
 ## Thank you for considering
