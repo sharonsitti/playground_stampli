@@ -47,6 +47,10 @@ const startBattleStmt = db.prepare(
 const expirePlacementStmt = db.prepare(
   "UPDATE games SET status = 'finished', winner_id = NULL WHERE id = ?",
 )
+const updateTurnStmt = db.prepare('UPDATE games SET current_turn = ? WHERE id = ?')
+const finishGameStmt = db.prepare(
+  "UPDATE games SET status = 'finished', winner_id = ? WHERE id = ?",
+)
 
 export function createGame(creatorId: string, preset: Preset): CreateGameResponse {
   const id = randomUUID()
@@ -96,4 +100,12 @@ export function startBattle(gameId: string, firstTurn: string): void {
 
 export function expirePlacement(gameId: string): void {
   expirePlacementStmt.run(gameId)
+}
+
+export function updateCurrentTurn(gameId: string, playerId: string): void {
+  updateTurnStmt.run(playerId, gameId)
+}
+
+export function finishGame(gameId: string, winnerId: string): void {
+  finishGameStmt.run(winnerId, gameId)
 }

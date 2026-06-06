@@ -22,6 +22,7 @@ const insertStmt = db.prepare(
    VALUES (?, ?, ?, ?, ?, ?, ?)`,
 )
 const selectStmt = db.prepare('SELECT * FROM ships WHERE game_id = ? AND player_id = ?')
+const markSunkStmt = db.prepare('UPDATE ships SET sunk = 1 WHERE id = ?')
 
 const savePlacementTxn = db.transaction(
   (gameId: string, playerId: string, ships: PlaceShipsRequest['ships']) => {
@@ -63,4 +64,8 @@ export function getShipAtCell(
     if (occupied) return ship
   }
   return null
+}
+
+export function markShipSunk(shipId: string): void {
+  markSunkStmt.run(shipId)
 }

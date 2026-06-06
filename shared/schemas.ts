@@ -142,3 +142,38 @@ export type BattleStartEvent = z.infer<typeof BattleStartEvent>;
 
 export const PlacementExpiredEvent = z.object({});
 export type PlacementExpiredEvent = z.infer<typeof PlacementExpiredEvent>;
+
+const Cell = z.object({ col: z.number().int(), row: z.number().int() });
+
+export const FireShotRequest = z.object({
+  player_id: z.string(),
+  col: z.number().int(),
+  row: z.number().int(),
+});
+export type FireShotRequest = z.infer<typeof FireShotRequest>;
+
+export const FireShotResponse = z.object({
+  hit: z.boolean(),
+  sunk: z.boolean(),
+  ship_type: ShipType.nullable(),
+  ship_cells: z.array(Cell).nullable(),
+});
+export type FireShotResponse = z.infer<typeof FireShotResponse>;
+
+export const ShotFiredEvent = z.object({
+  shooter_id: z.string(),
+  col: z.number().int(),
+  row: z.number().int(),
+  hit: z.boolean(),
+  sunk: z.boolean(),
+  ship_type: ShipType.nullable(),
+  ship_cells: z.array(Cell).nullable(),
+  next_turn: z.string(),
+});
+export type ShotFiredEvent = z.infer<typeof ShotFiredEvent>;
+
+export const TurnExpiredEvent = z.object({
+  player_id: z.string(),
+  next_turn: z.string(),
+});
+export type TurnExpiredEvent = z.infer<typeof TurnExpiredEvent>;

@@ -4,17 +4,21 @@ import {
   PlacementExpiredEvent,
   PlayerJoinedEvent,
   PlayerReadyEvent,
+  ShotFiredEvent,
   TimerTickEvent,
+  TurnExpiredEvent,
 } from '@shared/schemas'
 
 const API_BASE = 'http://localhost:8000'
 
 export type GameSSECallbacks = {
-  onPlayerJoined?: (data: { joiner: { id: string; name: string }; timer_seconds: number }) => void
-  onTimerTick?: (data: { seconds_remaining: number }) => void
-  onPlayerReady?: (data: { player_id: string }) => void
-  onBattleStart?: (data: { current_turn: string; timer_seconds: number }) => void
+  onPlayerJoined?: (data: PlayerJoinedEvent) => void
+  onTimerTick?: (data: TimerTickEvent) => void
+  onPlayerReady?: (data: PlayerReadyEvent) => void
+  onBattleStart?: (data: BattleStartEvent) => void
   onPlacementExpired?: () => void
+  onShotFired?: (data: ShotFiredEvent) => void
+  onTurnExpired?: (data: TurnExpiredEvent) => void
 }
 
 export function useGameSSE(gameId: string | null, callbacks: GameSSECallbacks): void {
@@ -52,6 +56,16 @@ export function useGameSSE(gameId: string | null, callbacks: GameSSECallbacks): 
     source.addEventListener('placement_expired', (event: MessageEvent<string>) => {
       PlacementExpiredEvent.parse(JSON.parse(event.data) as unknown)
       callbacksRef.current.onPlacementExpired?.()
+    })
+
+    source.addEventListener('shot_fired', (event: MessageEvent<string>) => {
+      const data = ShotFiredEvent.parse(JSON.parse(event.data) as unknown)
+      callbacksRef.current.onShotFired?.(data)
+    })
+
+    source.addEventListener('turn_expired', (event: MessageEvent<string>) => {
+      const data = TurnExpiredEvent.parse(JSON.parse(event.data) as unknown)
+      callbacksRef.current.onTurnExpired?.(data)
     })
 
     return () => {

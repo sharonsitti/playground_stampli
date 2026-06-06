@@ -2,6 +2,8 @@ import { getOccupiedCells, SHIP_SIZES } from '@shared/geometry'
 import {
   DeleteGameRequest,
   DeleteGameResponse,
+  FireShotRequest,
+  FireShotResponse,
   JoinGameRequest,
   JoinGameResponse,
   OkResponse,
@@ -19,9 +21,11 @@ import {
   joinGame,
   markReady,
   startBattle,
+  updateCurrentTurn,
 } from '../db/games.repository.js'
 import { getPlayerById } from '../db/players.repository.js'
-import { savePlacement } from '../db/ships.repository.js'
+import { getShipAtCell, getShips, markShipSunk, savePlacement } from '../db/ships.repository.js'
+import { hasShot, getShots, recordShot } from '../db/shots.repository.js'
 import { broadcastGame, broadcastLobby, gameClients, openStream, sendEvent } from '../sse.js'
 import { clearTimer, getCurrentSeconds, startTimer } from '../timer.js'
 
@@ -41,6 +45,33 @@ export function startPlacementTimer(game: GameRow): void {
       expirePlacement(gameId)
       broadcastGame(gameId, 'placement_expired', {})
       clearTimer(gameId)
+    },
+  )
+}
+
+function opponentOf(game: GameRow, playerId: string): string {
+  return playerId === game.creator_id ? (game.joiner_id as string) : game.creator_id
+}
+
+export function startTurnTimer(game: GameRow): void {
+  const gameId = game.id
+  startTimer(
+    gameId,
+    PRESET_SECONDS[game.preset],
+    (remaining) => {
+      broadcastGame(gameId, 'timer_tick', { seconds_remaining: remaining })
+    },
+    () => {
+      const current = getGame(gameId)
+      if (!current || current.status !== 'battle' || !current.current_turn) {
+        clearTimer(gameId)
+        return
+      }
+      const expiredPlayer = current.current_turn
+      const nextTurn = opponentOf(current, expiredPlayer)
+      updateCurrentTurn(gameId, nextTurn)
+      broadcastGame(gameId, 'turn_expired', { player_id: expiredPlayer, next_turn: nextTurn })
+      startTurnTimer(current)
     },
   )
 }
@@ -212,9 +243,86 @@ gamesRouter.post('/api/games/:gameId/ready', (req: Request, res: Response) => {
       current_turn: game.creator_id,
       timer_seconds: PRESET_SECONDS[game.preset],
     })
+    startTurnTimer({ ...game, status: 'battle', current_turn: game.creator_id })
   }
 
   res.json(OkResponse.parse({ ok: true }))
+})
+
+gamesRouter.post('/api/games/:gameId/shot', (req: Request, res: Response) => {
+  const gameId = String(req.params.gameId)
+
+  const game = getGame(gameId)
+  if (!game || game.status !== 'battle') {
+    res.status(409).json({ error: 'Game is not in the battle phase' })
+    return
+  }
+
+  const parsed = FireShotRequest.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid shot request' })
+    return
+  }
+  const { player_id, col, row } = parsed.data
+
+  if (game.current_turn !== player_id) {
+    res.status(403).json({ error: 'Not your turn' })
+    return
+  }
+
+  if (col < 0 || col > 9 || row < 1 || row > 10) {
+    res.status(400).json({ error: 'Shot is out of bounds' })
+    return
+  }
+
+  if (hasShot(gameId, player_id, col, row)) {
+    res.status(400).json({ error: 'Cell has already been fired at' })
+    return
+  }
+
+  const opponentId = opponentOf(game, player_id)
+  const ship = getShipAtCell(gameId, opponentId, col, row)
+  const hit = ship !== null
+  recordShot(gameId, player_id, col, row, hit)
+
+  let sunk = false
+  let shipType: FireShotResponse['ship_type'] = null
+  let shipCells: FireShotResponse['ship_cells'] = null
+
+  if (ship) {
+    const cells = getOccupiedCells(ship)
+    sunk = cells.every((c) => hasShot(gameId, player_id, c.col, c.row))
+    if (sunk) {
+      markShipSunk(ship.id)
+      shipType = ship.type
+      shipCells = cells
+    }
+  }
+
+  const opponentSunk = getShips(gameId, opponentId).every((s) => s.sunk === 1)
+  const nextTurn = opponentSunk ? player_id : opponentId
+
+  if (!opponentSunk) {
+    updateCurrentTurn(gameId, nextTurn)
+  }
+
+  broadcastGame(gameId, 'shot_fired', {
+    shooter_id: player_id,
+    col,
+    row,
+    hit,
+    sunk,
+    ship_type: shipType,
+    ship_cells: shipCells,
+    next_turn: nextTurn,
+  })
+
+  if (!opponentSunk) {
+    clearTimer(gameId)
+    startTurnTimer({ ...game, current_turn: nextTurn })
+  }
+
+  res.json(FireShotResponse.parse({ hit, sunk, ship_type: shipType, ship_cells: shipCells }))
 })
 
 gamesRouter.get('/api/games/:gameId/events', (req: Request, res: Response) => {
@@ -238,6 +346,13 @@ gamesRouter.get('/api/games/:gameId/events', (req: Request, res: Response) => {
         timer_seconds: PRESET_SECONDS[game.preset],
       })
     }
+    const remaining = getCurrentSeconds(gameId)
+    if (remaining !== null) {
+      sendEvent(res, 'timer_tick', { seconds_remaining: remaining })
+    }
+  }
+
+  if (game && game.status === 'battle') {
     const remaining = getCurrentSeconds(gameId)
     if (remaining !== null) {
       sendEvent(res, 'timer_tick', { seconds_remaining: remaining })

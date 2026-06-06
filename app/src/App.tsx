@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { WelcomeView } from '@/views/WelcomeView'
 import { LobbyView } from '@/views/LobbyView'
 import { PlacementView } from '@/views/PlacementView'
+import { BattleView } from '@/views/BattleView'
 import type { PlacedShip } from '@/views/placement/usePlacement'
 
 type View = 'welcome' | 'lobby' | 'placement' | 'battle' | 'gameover'
@@ -81,7 +82,15 @@ export default function App() {
         />
       )
     case 'battle':
-      return <div>Battle (coming soon) — {placedShips.length} ships placed</div>
+      if (!player || !game) return null
+      return (
+        <BattleView
+          gameId={game.gameId}
+          playerId={player.id}
+          placedShips={placedShips}
+          role={game.role}
+        />
+      )
     case 'gameover':
       return <div>Game Over (coming soon)</div>
   }

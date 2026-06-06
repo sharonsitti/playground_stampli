@@ -114,6 +114,25 @@ export async function markReady(gameId: string, playerId: string): Promise<void>
   }
 }
 
+export async function fireShot(
+  gameId: string,
+  playerId: string,
+  col: number,
+  row: number,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/games/${gameId}/shot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ player_id: playerId, col, row }),
+  })
+  if (res.status === 409) {
+    throw new ConflictError()
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to fire shot: ${String(res.status)}`)
+  }
+}
+
 export async function deleteGame(gameId: string, playerId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/games/${gameId}`, {
     method: 'DELETE',
