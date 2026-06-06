@@ -111,4 +111,46 @@ This was my first trial run for Claude Code experimental teams feature. I used a
 
 **Cost:** High - Session tokens exhaused 
 
+### Second Team
+Harness upgrades from Team 1:
+- **Custom personas** — all agents, including the Team Lead, now run from hand-authored instruction prompts instead of Claude's defaults. Each persona has explicit responsibilities, rules, and communication style.
+- **UI design system** — the design system markdown was added alongside the mockup screenshot, giving frontend agents a structured token reference rather than relying solely on screenshot interpretation.
+- **Teammate cap** — concurrent agents are capped to prevent runaway spawning and reduce noise.
+- **Conflict timeout** — any unresolved dispute is decided by the Team Lead within 5 turns. Debates don't loop.
+- **PR cycle rule** — no PR is done until critical gaps are closed and both the Team Lead and PM sign off. Code review and QA run in parallel, not sequentially.
+
+**Went well:**
+- **High UI fidelity** — the implemented UI was very close to the mockup.
+- **Contract-driven tests** — QA consistently asserted from the spec, not the implementation. 
+- **Teammate cap held** — never exceeded 6 agents at peak.
+- **Conflict timeout held** — no dispute ran longer than a few turns before the Team Lead stepped in.
+
+**Not so well:**
+- **Teammate chatter** — high volume of idle notifications, status re-confirmations, and re-asks for approvals already granted. Hard to distinguish signal from echo.
+- **Cut scope** — Ran out of session tokens before the team implemented the Game Over screen.
+
+**Outcome:** Working Battleship game with high UI fidelity and strong test coverage. Game Over screen not implemented.
+
+**Cost:** High — session tokens exhausted.
+
+### Third Team
+Harness upgrades from Team 2:
+- **Test integrity rule** — agents may add tests but never modify or delete a committed one; enforced via pre-commit hook.
+- **Coverage cap** — fixed at 5%; never raised or lowered.
+- **Explicit parallelism in spec** — the PR plan called out which PRs could run in parallel, removing any guesswork from the Team Lead.
+- **Token budget signals** — I occasionally told the Team Lead what percentage of session tokens remained so they could adjust pacing.
+
+**Went well:**
+- **PM blocked sign-off on a real bug** — caught from static analysis alone that Player B's lobby always loaded empty. Held PR2 sign-off until fixed.
+- **Agent count stayed low** — peak was 3 concurrent agents, well within the 6-agent cap. Two reasons: the spec constrained parallelism, and each agent owned the full slice for their PR rather than splitting into narrow specialists — fewer handoffs, fewer agents.
+- **Conflict resolved cleanly** — the PM and Team Lead disagreed on how the server should signal game over inside the `shot_fired` event. The Team Lead weighed the tradeoff, made the call, and the PM documented it and moved on. One exchange, no spiral.
+- **Test integrity rule held** — no agent attempted to modify a committed test file. Zero hook violations.
+
+**Not so well:**
+- **Took shortcuts** — the Team Lead skipped or shortened code review cycles to conserve tokens, trading quality for runway.
+
+**Outcome:** Working Battleship game with high UI fidelity and complete feature set. Weaker test coverage — acceptable for a conceptual example, not a production system.
+
+**Cost:** Medium - 50% session tokens exhuased
+
 ## High Level Design
