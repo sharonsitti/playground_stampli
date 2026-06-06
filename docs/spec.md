@@ -812,6 +812,7 @@ Numbered log of key decisions made by agents during implementation. Entries are 
 
 | # | Agent | Problem Statement | Severity | Decision | Tradeoffs | Approved |
 |---|---|---|---|---|---|---|
+| 1 | backend-2 | Spec defines status codes for wrong game status (409), wrong player/auth (403), and bad input (400), but is silent on the case where `creator_id` (on `POST /api/games`) or `player_id` (on `POST /api/games/:gameId/join`) references a player that does not exist in the `players` table. | low | Return `400 { error: "Unknown player" }` when the referenced player_id is not found in the `players` table. | The server must read the player's name + stats to populate the `game_created` and `player_joined` SSE payloads, so the lookup is unavoidable; the only question is how to handle a miss. Reuses the existing NF4 `{ error }` envelope — no new machinery. Treated as input validity (400), consistent with NF3 AC5 ordering (the player reference is part of the request body). | Yes |
 
 ---
 
