@@ -25,7 +25,9 @@
     "noFallthroughCasesInSwitch": true,
 
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/*": ["../shared/*"],
+      "zod": ["./node_modules/zod"]
     }
   },
   "include": ["src", "tests", "vite.config.ts"]

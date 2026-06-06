@@ -6,7 +6,13 @@ import path from 'path'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@shared': path.resolve(__dirname, '../shared'),
+      // shared/ lives outside this project root and can't walk up to app/node_modules,
+      // so point its bare `zod` import at the copy installed here.
+      zod: path.resolve(__dirname, './node_modules/zod'),
+    },
   },
   server: {
     port: 3000,

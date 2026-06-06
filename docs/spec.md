@@ -275,7 +275,7 @@ Creates or retrieves a player record by name. If a player with the given name al
 **Request**
 ```ts
 {
-  name: string  // trimmed before lookup; must contain at least 1 non-whitespace character
+  name: string  // trimmed before lookup; must contain 1–50 characters after trimming (inclusive)
 }
 ```
 
@@ -806,7 +806,24 @@ Each PR is a **vertical slice**: it delivers a complete, working capability a re
 **Satisfies:** F8 AC1–5 · F8 AC6 *(by construction — must not regress)* · F9 AC1–2 *(counters incremented)*
 
 ---
+## Decision Records
 
-## Open Questions
+Numbered log of key decisions made by agents during implementation. Entries are appended in chronological order of discovery.
 
-_None — all decisions have been resolved in conversation. The spec is ready for implementation._
+| # | Agent | Problem Statement | Severity | Decision | Tradeoffs | Approved |
+|---|---|---|---|---|---|---|
+| 1 | backend + frontend | `shared/` has no `node_modules`; bare `zod` import inside `shared/*.ts` fails to resolve on both sides | Low | Each consuming side (server, app) aliases `zod` to its own installed copy: `tsconfig paths` on both sides + `vite.config.ts resolve.alias` on app side. No workspace hoisting. | Keeps scaffolding minimal per NF6; any new third-party import added to `shared/` must get the same one-line alias on both sides | Approved |
+| 2 | security + backend | `POST /api/players` is unauthenticated and upserts on every call with `name` as the unique key; spec mandated only a min length (≥1 non-whitespace) and was silent on a max, so unbounded name length allows unbounded row/storage growth and oversized payloads echoed back (and later into SSE creator objects) | Low | Bound `name` to 1–50 characters after trimming (inclusive); over-length names are rejected with `400 { error }`, same envelope as empty/missing name. Schema: `z.string().trim().min(1).max(50)` | 50 is an arbitrary-but-sane display-name cap; no functional impact. Whitespace padding does not count toward the limit (stripped before measuring) | Approved (team-lead) |
+| 3 | security + backend | The game SSE stream (`GET /api/games/:gameId/events`) has no authentication — anyone who knows a `gameId` can subscribe and observe its events (`player_joined`, later `shot_fired` etc.). The spec defines no auth model beyond name entry (F1) and is single-machine localhost (NF6). | Low (accepted risk) | Accept: no per-stream auth. Mitigation is that `gameId` is an unguessable `randomUUID()` and the threat model is two local players. Caveat for future work: never place a `gameId` in a URL that gets logged, shared, or indexed externally, since possession of the id is the only thing gating event access. | Adding stream auth would require a session/token model the spec explicitly excludes; rejected as out of scope. Re-evaluate if the app ever leaves localhost. | Approved (per team-lead policy: non-critical, documented not actioned) |
+| 4 | security + backend | Authorization on `/join` and `DELETE /api/games/:gameId` is by `player_id` in the request body, with no session or token. `player_id` is the client-stored UUID returned by `POST /api/players`. It behaves as a bearer secret with no proof-of-possession, so anyone who learns another player's `player_id` can cancel their game or act as them. | Low (accepted risk) | Accept: body-based `player_id` authz is the spec's model (no auth beyond name entry, NF6). The authorization checks themselves are correct and correctly ordered (status 409 → authz 403 → input 400). | A real auth model (sessions/tokens) is explicitly out of scope per the spec's Out-of-Scope list. Re-evaluate only if the app gains real multi-user exposure. | Approved (per team-lead policy: non-critical, documented not actioned) |
+
+---
+
+## Known Issues
+
+Numbered log of known bugs and defects discovered during implementation. Entries are appended in chronological order of discovery.
+
+| # | Title | Agent | Severity | Problem Statement | How to Reproduce | Status |
+|---|---|---|---|---|---|---|
+| 1 | Join UPDATE lacks status guard (TOCTOU) | security | Low | `joinGameStmt` (`server/src/db/games.repository.ts`) was `UPDATE games SET status='placing', joiner_id=? WHERE id=?` with no `AND status='waiting'`. The handler checks status at the `index.ts` join handler before calling, but that is check-then-act: two concurrent joins both pass the handler guard, both UPDATE, the second overwrites `joiner_id`. `deleteGameStmt` already carried the `AND status='waiting'` guard, so this was an inconsistency. Bounded by NF6 (no concurrency on localhost). | Two clients POST `/api/games/:gameId/join` for the same waiting game in the same tick; both succeed and the second clobbers the first joiner. | Fixed in PR 2 (backend, before the critical-only policy) — `joinGameStmt` now carries `AND status='waiting'`; `joinGame()` returns `undefined` on `.changes === 0`, which the handler maps to 409. Verified on disk; `make server-check` green. |
+| 2 | SSE write has no 'error' handler | security | Low | `writeEvent`'s `res.write()` (`server/src/sse.ts`) ran inside `emitLobbyEvent`/`emitGameEvent` loops; the only listener registered on each response was `'close'`. If a socket is destroyed but not yet removed from the connection Set and an emit races in, `res.write()` on a dead stream emits an `'error'` event with no listener → unhandled, can throw and crash the emitting handler. Violated NF3 AC4 (handlers must never crash). Bounded by NF6. | Open an SSE stream, kill the client connection abruptly, trigger a broadcast in the same instant before the `'close'` handler fires. | Fixed in PR 2 (backend, before the critical-only policy) — `res.on('error', …)` added alongside `'close'` in both `addLobbyConnection` and `addGameConnection`; `res.write` also wrapped in try/catch so a dead socket can't abort the broadcast loop. Verified on disk; `make server-check` green. |

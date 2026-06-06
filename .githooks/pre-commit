@@ -1,4 +1,26 @@
 #!/bin/sh
 # Runs all checks (lint + typecheck + test) before allowing a commit.
 # Bypass for genuine emergencies with `git commit --no-verify`.
+
+# Guard: block modifications or deletions of committed test files unless explicitly approved.
+# New test files (not yet in HEAD) pass through silently.
+# Set ALLOW_TEST_CHANGES=1 to explicitly approve changes after reviewing the diff.
+modified_tests=$(git diff --cached --name-only --diff-filter=MD | grep -E '\.(test|spec)\.(ts|tsx|js|jsx)$' || true)
+
+if [ -n "$modified_tests" ]; then
+  if [ -z "$ALLOW_TEST_CHANGES" ]; then
+    echo "BLOCKED: The following committed test files were modified:" >&2
+    echo "$modified_tests" | sed 's/^/  /' >&2
+    echo "" >&2
+    echo "Review the changes:" >&2
+    echo "$modified_tests" | sed 's/^/  git diff --cached /' >&2
+    echo "" >&2
+    echo "If this is intentional, re-run the commit with:" >&2
+    echo "  ALLOW_TEST_CHANGES=1 git commit ..." >&2
+    exit 1
+  else
+    echo "Test modifications explicitly approved by team-lead: $(echo "$modified_tests" | tr '\n' ' ')"
+  fi
+fi
+
 exec make check
