@@ -9,6 +9,11 @@ coverage/
 # Logs
 *.log
 
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
 # Editors / OS
 .vscode/
 .DS_Store

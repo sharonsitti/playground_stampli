@@ -24,17 +24,6 @@ If it is not explicitly described in the requirements or UI mockup, it is out of
 - **Interaction patterns:** drag-and-drop for ship placement (F4 specifies click-only); keyboard shortcuts beyond `R` for rotation
 - **SSE behaviour:** auto-reconnects, retries. 
 
----
-
-## UI Mockup Notes
-
-`docs/battleship-ui-mockup.png` is an annotated reference that stacks multiple states of the same screen for illustration. Do **not** treat stacked states as a simultaneous layout:
-
-- **Section 04 — Placement:** The two grids labeled "Valid placement ✓" and "Overlap — invalid ✗" are a visual legend showing the green/red preview colour, not two grids rendered at once. The actual placement screen has **one** 10×10 grid, one ship palette to the right, and the timer/ready button above.
-- **Section 05 — Battle:** The "YOUR TURN" banner and the "WAITING FOR OPPONENT…" banner shown stacked are alternate states; only one renders at a time. The turn-expired toast below them is also an alternate state, not a persistent element.
-
----
-
 ## Requirements
 
 ### Functional (ranked by priority)
@@ -275,7 +264,7 @@ Creates or retrieves a player record by name. If a player with the given name al
 **Request**
 ```ts
 {
-  name: string  // trimmed before lookup; must contain at least 1 non-whitespace character
+  name: string  // trimmed before lookup; must contain 1–50 characters after trimming (inclusive)
 }
 ```
 
@@ -806,7 +795,23 @@ Each PR is a **vertical slice**: it delivers a complete, working capability a re
 **Satisfies:** F8 AC1–5 · F8 AC6 *(by construction — must not regress)* · F9 AC1–2 *(counters incremented)*
 
 ---
+## Decision Records
 
-## Open Questions
+Numbered log of key decisions made by agents during implementation. Entries are appended in chronological order of discovery.
 
-_None — all decisions have been resolved in conversation. The spec is ready for implementation._
+| # | Agent | Problem Statement | Severity | Decision | Tradeoffs | Approved |
+|---|---|---|---|---|---|---|
+| 1 | backend-2 | Spec defines status codes for wrong game status (409), wrong player/auth (403), and bad input (400), but is silent on the case where `creator_id` (on `POST /api/games`) or `player_id` (on `POST /api/games/:gameId/join`) references a player that does not exist in the `players` table. | low | Return `400 { error: "Unknown player" }` when the referenced player_id is not found in the `players` table. | The server must read the player's name + stats to populate the `game_created` and `player_joined` SSE payloads, so the lookup is unavoidable; the only question is how to handle a miss. Reuses the existing NF4 `{ error }` envelope — no new machinery. Treated as input validity (400), consistent with NF3 AC5 ordering (the player reference is part of the request body). | Yes |
+| 2 | backend-3 | NF3 AC5 mandates check order phase/status (409) → auth (403) → input validity (400). But `/place` and `/ready` carry `player_id` inside the request body, so the body must be parsed to extract `player_id` before the auth check can run. The spec's ordering implicitly assumes the actor identity is already known and is silent on a malformed body that lacks `player_id` entirely. | low | Parse the request body first to extract `player_id`; a completely malformed body (missing/invalid `player_id`) returns `400` regardless of game state. Once `player_id` is available, apply the standard phase (409) → auth (403) → content-validity (400) order. | The body parse is an unavoidable prerequisite for the auth check, so it must precede it; this means a malformed body short-circuits to 400 even when the game is also in the wrong phase (which would otherwise be 409). Acceptable because a body that can't be parsed carries no actionable identity — the request is unprocessable on its face. No new machinery; consistent with NF4 envelope. | Yes |
+| 3 | backend-4 | The `shot_fired` SSE schema requires `next_turn: string` (player_id who fires next), a non-nullable field. On the game-ending shot there is no next player. The PR5 note says "freeze the board on the final `shot_fired` event" but is silent on what value `next_turn` carries when the game is over. | low | Use `shooter_id` as a sentinel: on the game-ending shot, `next_turn` equals the shooter who just fired. The client detects `next_turn === <id of player who just shot>` and freezes the board (no turn pass, no new timer). `game_over` is emitted immediately after as the authoritative end signal. | Reuses the existing required field instead of making it nullable or adding a new field, avoiding a schema change that would ripple to both sides. Cost: it overloads a semantically-meaningful field ("who fires next") with an out-of-band "game over" signal, creating an implicit client contract (`next_turn === shooter` means freeze, not "shooter goes again"). Mitigated by `game_over` arriving immediately after on the same stream as the explicit, authoritative terminator — the client never relies on the sentinel alone. | Yes |
+
+---
+
+## Known Issues
+
+Numbered log of known bugs and defects discovered during implementation. Entries are appended in chronological order of discovery.
+
+| # | Title | Agent | Severity | Problem Statement | How to Reproduce | Status |
+|---|---|---|---|---|---|---|
+| 1 | Initial lobby fetch never renders pre-existing waiting games | frontend-2 | critical | `useLobbySSE(initialGames)` seeds its state with `useState<Game[]>(initialGames)`, which React only honors on the first render. `LobbyView` mounts with `initialGames = []`, fetches `GET /api/games`, and calls `setInitialGames(loaded)` after the fetch resolves — but the hook ignores the changed prop, so the fetched list never enters the rendered `games`. Only games arriving via live `game_created` SSE after mount appear. Breaks F2 AC1 (lobby must list all `waiting` games) and the core join flow of Flow 2: a player opening the lobby cannot see or join a game that was created before their tab connected. | 1. Tab A: register, create a game (it enters `waiting`). 2. Tab B: register, open the lobby. 3. Expected: Tab B's lobby lists Tab A's game. Actual: Tab B's lobby is empty — the `game_created` event fired before B's EventSource connected, and the initial `GET /api/games` result is dropped. B can never join A's game. | Resolved |
+

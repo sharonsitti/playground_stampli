@@ -1,4 +1,9 @@
+import { CreatePlayerRequest, PlayerResponse } from '@shared/schemas'
 import express, { NextFunction, Request, Response } from 'express'
+
+import { upsertPlayer } from './db/players.repository.js'
+import { gamesRouter } from './routes/games.js'
+import { lobbyRouter } from './routes/lobby.js'
 
 export const app = express()
 
@@ -17,6 +22,24 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' })
+})
+
+app.post('/api/players', (req: Request, res: Response) => {
+  const parsed = CreatePlayerRequest.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Name must be 1-50 characters' })
+    return
+  }
+  const player = upsertPlayer(parsed.data.name)
+  res.json(PlayerResponse.parse(player))
+})
+
+app.use(lobbyRouter)
+app.use(gamesRouter)
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err)
+  res.status(500).json({ error: 'Internal server error' })
 })
 
 app.listen(8000, () => {

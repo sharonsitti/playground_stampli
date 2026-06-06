@@ -20,7 +20,7 @@ app/                   React frontend
   vite.config.ts       Vite + Tailwind CSS v4 config
 docs/                  Product/technical context — source of truth for behavior
 .claude/
-  skills/              Project-local Claude skills (dev, add-tests, make-pr)
+  skills/              Project-local Claude skills
   hooks/               PostToolUse hooks (frontend-check.sh)
   settings.json        Permissions, hooks, enabled plugins
 .github/               CI workflows (client-ci on every PR)
@@ -106,7 +106,25 @@ Two additional rules fire as errors and commonly surprise agents:
 | Functions | 5% |
 | Lines | 5% |
 
-Intentionally low — this is a conceptual pairing surface, not a production system. The threshold exists to catch complete regressions, not enforce production-grade coverage. **Raise as coverage improves — never lower.**
+Intentionally low — this is a conceptual pairing surface, not a production system. The threshold exists to catch complete regressions, not enforce production-grade coverage. **Never raise it, never lower it — keep it fixed at 5%.**
+
+### Pre-commit test protection
+
+**Rule: agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test.**
+
+The pre-commit hook enforces this. It guards against modifications or deletions of committed test files at commit time.
+
+**Normal path:** no committed test files in the staged diff → `make check` runs → commit proceeds.
+
+**Blocked path:** a committed test file (`*.test.ts`, `*.test.tsx`, `*.spec.ts`, etc.) appears as modified or deleted in the staged diff → hook prints the affected files and the review command, then exits 1. The commit does not happen.
+
+**Approved path:** team-lead reviews the diff, decides the change is legitimate, re-runs with `ALLOW_TEST_CHANGES=1 git commit ...` → hook prints a confirmation line and continues to `make check`.
+
+Key properties:
+- New test files (not yet in HEAD) pass through silently — no friction for writing new tests
+- Adding tests to an existing committed file triggers the warning — team-lead reviews and decides
+- `ALLOW_TEST_CHANGES=1` is not persistent; every commit touching test files requires a conscious decision
+- The team-lead is the only agent who commits, so this gate is always at the right level of authority
 
 ### Allowed permissions (`.claude/settings.json`)
 
@@ -129,13 +147,7 @@ Pre-approved without a prompt:
 
 ## Skills
 
-Project-local skills live in `.claude/skills/`. Invoke when the user's request matches the trigger:
-
-- **`dev`** — engineering fundamentals for non-trivial code changes: clean code, SOLID, DRY, decoupling, componentization, KISS, no bloat. Use for "/dev", "implement X", "refactor X". Plans against `docs/` + `CLAUDE.md` before writing; never touches tests (that's `add-tests`).
-- **`add-tests`** — writes unit/integration tests **driven by `docs/`**, not the implementation. Use for "add tests", "/add-tests", "write tests for X". Proposes ranked happy/unhappy checks first and waits for confirmation before writing code. Refuses to proceed if `docs/` is silent on the feature.
-- **`make-pr`** — opens or refreshes a GitHub PR for the current branch via `gh`. Use for "make a PR", "/make-pr", "update the PR". Pushes the branch and submits without further confirmation.
-
-Global skills also available (from `~/.claude/skills/` or plugin registry):
+Global skills available (from `~/.claude/skills/` or plugin registry):
 - **`frontend-design`** — polished, production-grade component/page generation.
 - **`verify`** — runs the app and confirms a change works end-to-end.
 - **`simplify`** — reviews changed code for quality and fixes issues found.
@@ -167,3 +179,5 @@ Global skills also available (from `~/.claude/skills/` or plugin registry):
 3. **`server/tsconfig.json`** — add to `compilerOptions.paths`: `"@shared/*": ["../shared/*"]`; also register `tsconfig-paths` with tsx so path aliases resolve at runtime (pass `-r tsconfig-paths/register` or equivalent)
 
 Import as `import { Foo } from '@shared/schemas'` on both sides. Never use relative `../../shared` imports in source files.
+
+**Third-party deps in `shared/`:** `shared/` has no `node_modules`. Any bare third-party import inside `shared/*.ts` (currently `zod`) must be aliased to each side's own installed copy. If you add a new third-party import to a `shared/` file, add a one-line alias on ALL THREE of: `server/tsconfig.json paths`, `app/tsconfig.json paths`, and `app/vite.config.ts resolve.alias`.
