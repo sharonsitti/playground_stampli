@@ -11,7 +11,7 @@ A small full-stack app — **Express** (Node.js) backend + **React + Vite + Type
   - [`docs/battleship-design-system.md`](./docs/battleship-design-system.md) — color tokens, typography, component specs, and per-screen layout for every UI state
   - [`docs/battleship-ui-mockup.png`](./docs/battleship-ui-mockup.png) — annotated visual reference; the screenshot is the source of truth for UI and experience
 
-- **A Claude Code harness** — the scaffolding that made autonomous execution reliable. The harness is what made it possible to hand the spec to agents and trust the output:
+- **A Claude Code harness** — the scaffolding that made autonomous team execution reliable. 
   - **Instruction prompts** — loaded automatically at the start of every session so agents are never starting cold:
     - [`CLAUDE.md`](./CLAUDE.md) — project-wide context: repo layout, tech stack, house style, conventions
     - [`.claude/agents/team-lead.md`](./.claude/agents/team-lead.md) — orchestrates agents, parallelizes work, owns commits and PRs, and is the final decision-maker on any cross-cutting call
@@ -23,7 +23,8 @@ A small full-stack app — **Express** (Node.js) backend + **React + Vite + Type
   - **PostToolUse hooks** — fire automatically after every file edit, keeping the working tree clean turn-by-turn:
     - [`frontend-check.sh`](./.claude/hooks/frontend-check.sh) — on any `.ts`/`.tsx`/`.css` change under `app/`: auto-fixes lint and format, then blocks and surfaces TypeScript errors to the agent immediately
     - [`server-check.sh`](./.claude/hooks/server-check.sh) — on any `.ts` change under `server/`: same auto-fix and block pattern
-  - **Pre-commit hook** ([`.githooks/pre-commit`](./.githooks/pre-commit)) — runs `make check` (lint + typecheck + tests, both sides) before every commit. Enforces one hard rule: **agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test.** Any staged modification to a committed test file blocks the commit and requires explicit team-lead sign-off (`ALLOW_TEST_CHANGES=1`) to proceed.
+  - **Pre-commit hook** ([`.githooks/pre-commit`](./.githooks/pre-commit)) — fires on every `git commit` and runs lint, type-checking, and the full test suite on both frontend and server before the commit is allowed through. This ensures no broken or failing code ever enters the repo.
+  - **Test integrity rule** —  agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test. This rule is enforced using a pre-commit hook that surfaces staged changes to a committed test file and blocks the commit. The team-lead reviews the changes and makes a judgement call whether the it's the code or the tests were broken. Lead signs-off (`ALLOW_TEST_CHANGES=1`) to proceed with changing test files, or push back to engineers to fix an actual code issue. 
 
 ## Quick start
 
