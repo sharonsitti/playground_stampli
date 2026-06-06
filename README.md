@@ -12,7 +12,7 @@ The entire game was implemented by a team of autonomous AI agents working from a
 
 **Built by Sharon:**
 
-- **Specs** — the product and technical spec, UI design system, and visual mockup that served as the agents' source of truth. See [How the harness works](#how-the-harness-works) for details.
+- **Specs** — the product and technical spec, UI design system, and visual mockup that served as the agents' source of truth. See [Spec Driven Development](#spec-driven-development) for details.
 
 - **Claude Code harness** — the agent instruction prompts, PostToolUse hooks, and pre-commit rules that made autonomous execution reliable. See [How the harness works](#how-the-harness-works) for details.
 
@@ -47,10 +47,11 @@ My approach uses a spec and a harness working in tandem. Together, they address 
 ---
 
 ### Spec Driven Development
-I designed a spec that anticipates where agents are likely to spiral, diverge, or backtrack and removed the ambiguity:
+I designed a [spec](./docs/spec.md) that anticipates where agents are likely to spiral, diverge, or backtrack and removed the ambiguity:
 
-- **Schema as binding contract.** Parallel agents can diverge on data shapes: one assumes a field exists, another never adds it. Defining every schema in the spec as a source of truth means there's no drift in what gets built or how it connects.
-- **PR decomposition.** Without a bounded scope, agents over-build and absorb work they weren't asked to do. Slicing the spec into explicit PRs before coding begins gives each agent a clear unit of work — one vertical slice of user value, never boilerplate detached from a requirement. Each PR builds on the last in dependency order, so there's nothing to coordinate and nothing to guess mid-development.
+- **[Schema as binding contract](./docs/spec.md#data-models).** Parallel agents can diverge on data shapes: one assumes a field exists, another never adds it. Defining every schema in the spec as a source of truth means there's no drift in what gets built or how it connects.
+- **[PR decomposition](./docs/spec.md#pr-plan).** Without a bounded scope, agents over-build and absorb work they weren't asked to do. Slicing the spec into explicit PRs before coding begins gives each agent a clear unit of work — one vertical slice of user value, never boilerplate detached from a requirement. Each PR builds on the last in dependency order, so there's nothing to coordinate and nothing to guess mid-development.
+- **UI [design system](./docs/battleship-design-system.md) and [mockup](./docs/battleship-ui-mockup.png).** Without a visual reference, frontend agents make independent styling decisions that produce an inconsistent UI. The design system defines every token, component, and screen layout; the annotated mockup is the source of truth for experience. Both are provided to agents upfront so there's no room for interpretation.
 
 ### AI Harness
 
