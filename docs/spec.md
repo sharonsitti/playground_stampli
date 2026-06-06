@@ -24,17 +24,6 @@ If it is not explicitly described in the requirements or UI mockup, it is out of
 - **Interaction patterns:** drag-and-drop for ship placement (F4 specifies click-only); keyboard shortcuts beyond `R` for rotation
 - **SSE behaviour:** auto-reconnects, retries. 
 
----
-
-## UI Mockup Notes
-
-`docs/battleship-ui-mockup.png` is an annotated reference that stacks multiple states of the same screen for illustration. Do **not** treat stacked states as a simultaneous layout:
-
-- **Section 04 — Placement:** The two grids labeled "Valid placement ✓" and "Overlap — invalid ✗" are a visual legend showing the green/red preview colour, not two grids rendered at once. The actual placement screen has **one** 10×10 grid, one ship palette to the right, and the timer/ready button above.
-- **Section 05 — Battle:** The "YOUR TURN" banner and the "WAITING FOR OPPONENT…" banner shown stacked are alternate states; only one renders at a time. The turn-expired toast below them is also an alternate state, not a persistent element.
-
----
-
 ## Requirements
 
 ### Functional (ranked by priority)
