@@ -2,6 +2,29 @@
 
 A small full-stack app — **Express** (Node.js) backend + **React + Vite + TypeScript** frontend — set up for rapid, collaborative, pair-friendly development. The scaffold is deliberately minimal: each tool earns its place, nothing is added until it's needed.
 
+## What's included
+
+- **Multiplayer Battleship game** — fully playable on localhost by two players in seperate browser tabs. Ships a complete UI (React + Tailwind), an Express backend, and a SQLite database. Built and tested by a team of autonomous agents.
+
+- **Specs** — the source of truth the agents worked from, and where most of the human judgment in this project was concentrated:
+  - [`docs/spec.md`](./docs/spec.md) — requirements, data models, API contracts, key user flows, design decisions, and PR slicing
+  - [`docs/battleship-design-system.md`](./docs/battleship-design-system.md) — color tokens, typography, component specs, and per-screen layout for every UI state
+  - [`docs/battleship-ui-mockup.png`](./docs/battleship-ui-mockup.png) — annotated visual reference; the screenshot is the source of truth for UI and experience
+
+- **A Claude Code harness** — the scaffolding that made autonomous execution reliable. The harness is what made it possible to hand the spec to agents and trust the output:
+  - **Instruction prompts** — loaded automatically at the start of every session so agents are never starting cold:
+    - [`CLAUDE.md`](./CLAUDE.md) — project-wide context: repo layout, tech stack, house style, conventions
+    - [`.claude/agents/team-lead.md`](./.claude/agents/team-lead.md) — orchestrates agents, parallelizes work, owns commits and PRs, and is the final decision-maker on any cross-cutting call
+    - [`.claude/agents/backend-engineer.md`](./.claude/agents/backend-engineer.md) — implements and reviews all server-side code: Express routes, SQLite schema, and repository layer
+    - [`.claude/agents/frontend-engineer.md`](./.claude/agents/frontend-engineer.md) — implements and reviews all client-side code: React components, state management, and Tailwind styling
+    - [`.claude/agents/product-manager.md`](./.claude/agents/product-manager.md) — guards scope, validates delivery against the spec's acceptance criteria, and blocks sign-off when requirements aren't fully met
+    - [`.claude/agents/qa-engineer.md`](./.claude/agents/qa-engineer.md) — writes tests derived from the spec and user flows, not the implementation, to ensure the suite enforces the product contract
+    - [`.claude/agents/security-engineer.md`](./.claude/agents/security-engineer.md) — reviews PRs for OWASP Top 10 vulnerabilities, SQL injection, XSS, and input validation gaps across the full stack
+  - **PostToolUse hooks** — fire automatically after every file edit, keeping the working tree clean turn-by-turn:
+    - [`frontend-check.sh`](./.claude/hooks/frontend-check.sh) — on any `.ts`/`.tsx`/`.css` change under `app/`: auto-fixes lint and format, then blocks and surfaces TypeScript errors to the agent immediately
+    - [`server-check.sh`](./.claude/hooks/server-check.sh) — on any `.ts` change under `server/`: same auto-fix and block pattern
+  - **Pre-commit hook** ([`.githooks/pre-commit`](./.githooks/pre-commit)) — runs `make check` (lint + typecheck + tests, both sides) before every commit. Enforces one hard rule: **agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test.** Any staged modification to a committed test file blocks the commit and requires explicit team-lead sign-off (`ALLOW_TEST_CHANGES=1`) to proceed.
+
 ## Quick start
 
 You'll need Node 22+.
@@ -13,17 +36,6 @@ make dev       # start both servers in parallel
 
 - Frontend: <http://localhost:3000>
 - Backend API: <http://localhost:8000>
-
-## Why this stack
-
-The choices optimize for **fast iteration, clarity of contract, and minimal setup tax** — so a small team can land changes quickly and trust what they're shipping.
-
-- **Setup is one command.** `make install` does everything; `make dev` boots both sides. The only prerequisite is Node 22+ — no runtime juggling, no "works on my machine."
-- **Feedback is instant.** Hot reload on the frontend, `tsx watch` on the backend, millisecond test runs, types checked as you type. You think about the problem, not the tools.
-- **The toolchain is conventional.** Idiomatic choices throughout (`Vitest`, `Tailwind`, `shadcn/ui`, `Prettier`, `ESLint`, `Express`) — anyone familiar with the ecosystem is productive immediately.
-- **The same checks run everywhere.** A pre-commit hook, CI, and `make check` all call the same targets. Green locally = green in CI.
-
-The net effect: less time on plumbing, more time on the change you actually came here to make — and a codebase that stays legible as it grows.
 
 ## How the harness works
 
