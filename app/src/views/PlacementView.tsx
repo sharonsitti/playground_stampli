@@ -1,15 +1,9 @@
-import { Check, RotateCcw, Ship } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import { useGameSSE } from '@/hooks/useGameSSE'
+import { ConflictError, markReady, placeShips } from '@/lib/api'
 import { FleetGrid } from './placement/FleetGrid'
-import {
-  FLEET,
-  SHIP_SIZES,
-  usePlacement,
-  type Cell,
-  type PlacedShip,
-  type ShipType,
-} from './placement/usePlacement'
+import { PlacementPanel, type ReadyState } from './placement/PlacementPanel'
+import { FLEET, usePlacement, type Cell, type PlacedShip } from './placement/usePlacement'
 
 type PlacementViewProps = {
   gameId: string
@@ -18,14 +12,6 @@ type PlacementViewProps = {
   role: 'creator' | 'joiner'
   onReady: (ships: PlacedShip[]) => void
   onExpired: () => void
-}
-
-const SHIP_LABELS: Record<ShipType, string> = {
-  carrier: 'Carrier',
-  battleship: 'Battleship',
-  cruiser: 'Cruiser',
-  submarine: 'Submarine',
-  destroyer: 'Destroyer',
 }
 
 const INSTRUCTIONS: Array<{ action: string; text: string }> = [
@@ -48,18 +34,56 @@ const INSTRUCTIONS: Array<{ action: string; text: string }> = [
 
 const cellKey = (cell: Cell) => `${String(cell.col)},${String(cell.row)}`
 
-// gameId/playerId/preset/onReady/onExpired are part of the contract PR4 wires into the live flow.
-export function PlacementView(_props: PlacementViewProps) {
+function formatTimer(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = String(seconds % 60).padStart(2, '0')
+  return `${String(mins)}:${secs}`
+}
+
+export function PlacementView({ gameId, playerId, onReady, onExpired }: PlacementViewProps) {
   const placement = usePlacement()
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null)
+  const [submitted, setSubmitted] = useState(false)
+  const [opponentReady, setOpponentReady] = useState(false)
+
   const allPlaced = placement.placedShips.length === FLEET.length
+  const readyState: ReadyState = submitted ? 'locked' : allPlaced ? 'ready' : 'unready'
+
+  useGameSSE(gameId, {
+    onTimerTick: ({ seconds_remaining }) => {
+      setSecondsRemaining(seconds_remaining)
+    },
+    onPlayerReady: ({ player_id }) => {
+      if (player_id !== playerId) setOpponentReady(true)
+    },
+    onBattleStart: () => {
+      onReady(placement.placedShips)
+    },
+    onPlacementExpired: () => {
+      onExpired()
+    },
+  })
 
   const handleCellClick = (cell: Cell) => {
+    if (submitted) return
     const placedType = placement.cellToShip.get(cellKey(cell))
     if (placedType) {
       placement.pickUpPlaced(placedType)
       return
     }
     placement.placeAtCursor()
+  }
+
+  const handleReady = () => {
+    if (readyState !== 'ready') return
+    const ships = placement.placedShips
+    setSubmitted(true)
+    void placeShips(gameId, playerId, ships)
+      .then(() => markReady(gameId, playerId))
+      .catch((err: unknown) => {
+        if (err instanceof ConflictError) return
+        throw err
+      })
   }
 
   return (
@@ -73,8 +97,8 @@ export function PlacementView(_props: PlacementViewProps) {
             Place all 5 ships on your grid before time runs out.
           </span>
         </div>
-        <span className="text-2xl font-bold text-[#4F46E5] tabular-nums" aria-hidden="true">
-          —:—
+        <span className="text-2xl font-bold text-[#4F46E5] tabular-nums">
+          {secondsRemaining === null ? '—:—' : formatTimer(secondsRemaining)}
         </span>
       </header>
 
@@ -84,7 +108,7 @@ export function PlacementView(_props: PlacementViewProps) {
             cellToShip={placement.cellToShip}
             previewCells={placement.previewCells}
             isPreviewValid={placement.isPreviewValid}
-            disabled={false}
+            disabled={submitted}
             onCellEnter={placement.setCursorCell}
             onCellClick={handleCellClick}
             onLeave={() => {
@@ -92,66 +116,19 @@ export function PlacementView(_props: PlacementViewProps) {
             }}
           />
 
-          <aside className="bg-card flex w-[220px] flex-col gap-3 rounded-xl border border-[#E5E7EB] p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-[#0F172A]">Ships to place</h2>
-
-            <ul className="flex flex-col gap-1.5">
-              {placement.availableShips.map((type) => {
-                const isSelected = placement.selectedShip === type
-                return (
-                  <li key={type}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        placement.selectFromPalette(type)
-                      }}
-                      aria-pressed={isSelected}
-                      className={cn(
-                        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors',
-                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4F46E5]',
-                        isSelected
-                          ? 'bg-[#EEF2FF] text-[#4F46E5]'
-                          : 'text-[#0F172A] hover:bg-[#F1F5F9]',
-                      )}
-                    >
-                      <Ship className="size-4" aria-hidden="true" />
-                      <span className="text-sm">{SHIP_LABELS[type]}</span>
-                      <span className="ml-auto text-xs text-[#94A3B8]">{SHIP_SIZES[type]}</span>
-                    </button>
-                  </li>
-                )
-              })}
-              {placement.availableShips.length === 0 ? (
-                <li className="px-2 py-1.5 text-xs text-[#94A3B8]">All ships placed.</li>
-              ) : null}
-            </ul>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={placement.reset}
-              disabled={placement.placedShips.length === 0 && placement.selectedShip === null}
-            >
-              <RotateCcw className="size-3.5" aria-hidden="true" />
-              Reset
-            </Button>
-
-            {/* TODO PR4: wire timer + ready logic here (3-state button, place/ready POSTs). */}
-            <div className="mt-1 flex flex-col gap-1">
-              <Button
-                size="lg"
-                className="w-full bg-[#F1F5F9] text-[#94A3B8] hover:bg-[#F1F5F9]"
-                disabled
-              >
-                <Check className="size-4" aria-hidden="true" />
-                I&apos;m ready!
-              </Button>
-              {!allPlaced ? (
-                <p className="text-xs text-[#94A3B8]">Place all 5 ships to continue</p>
-              ) : null}
-            </div>
-          </aside>
+          <PlacementPanel
+            availableShips={placement.availableShips}
+            selectedShip={placement.selectedShip}
+            readyState={readyState}
+            opponentReady={opponentReady}
+            resetDisabled={
+              submitted || (placement.placedShips.length === 0 && placement.selectedShip === null)
+            }
+            locked={submitted}
+            onSelect={placement.selectFromPalette}
+            onReset={placement.reset}
+            onReady={handleReady}
+          />
         </div>
 
         <section>

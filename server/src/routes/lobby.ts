@@ -20,7 +20,7 @@ lobbyRouter.post('/api/games', (req: Request, res: Response) => {
 
   const creator = getPlayerById(parsed.data.creator_id)
   if (!creator) {
-    res.status(400).json({ error: 'Unknown creator' })
+    res.status(400).json({ error: 'Unknown player' })
     return
   }
 

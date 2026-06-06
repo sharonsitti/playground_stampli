@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { WelcomeView } from '@/views/WelcomeView'
 import { LobbyView } from '@/views/LobbyView'
 import { PlacementView } from '@/views/PlacementView'
+import type { PlacedShip } from '@/views/placement/usePlacement'
 
 type View = 'welcome' | 'lobby' | 'placement' | 'battle' | 'gameover'
 type Preset = 'quick' | 'casual'
@@ -14,6 +15,8 @@ export default function App() {
   const [view, setView] = useState<View>('welcome')
   const [player, setPlayer] = useState<Player | null>(null)
   const [game, setGame] = useState<GameContext | null>(null)
+  const [placedShips, setPlacedShips] = useState<PlacedShip[]>([])
+  const [expiredNotice, setExpiredNotice] = useState(false)
 
   switch (view) {
     case 'welcome':
@@ -30,14 +33,34 @@ export default function App() {
     case 'lobby':
       if (!player) return null
       return (
-        <LobbyView
-          playerId={player.id}
-          playerName={player.name}
-          onGameJoined={(gameId, preset, role) => {
-            setGame({ gameId, preset, role })
-            setView('placement')
-          }}
-        />
+        <>
+          {expiredNotice ? (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-3 bg-[#FEF2F2] px-5 py-3 text-sm font-medium text-[#B91C1C]"
+            >
+              <span>Game cancelled — placement timer expired</span>
+              <button
+                type="button"
+                className="text-xs font-semibold text-[#B91C1C] underline"
+                onClick={() => {
+                  setExpiredNotice(false)
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          ) : null}
+          <LobbyView
+            playerId={player.id}
+            playerName={player.name}
+            onGameJoined={(gameId, preset, role) => {
+              setExpiredNotice(false)
+              setGame({ gameId, preset, role })
+              setView('placement')
+            }}
+          />
+        </>
       )
     case 'placement':
       if (!player || !game) return null
@@ -47,14 +70,18 @@ export default function App() {
           playerId={player.id}
           preset={game.preset}
           role={game.role}
-          onReady={() => {}}
+          onReady={(ships) => {
+            setPlacedShips(ships)
+            setView('battle')
+          }}
           onExpired={() => {
+            setExpiredNotice(true)
             setView('lobby')
           }}
         />
       )
     case 'battle':
-      return <div>Battle (coming soon)</div>
+      return <div>Battle (coming soon) — {placedShips.length} ships placed</div>
     case 'gameover':
       return <div>Game Over (coming soon)</div>
   }

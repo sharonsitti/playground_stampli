@@ -91,3 +91,54 @@ export const PlayerJoinedEvent = z.object({
   timer_seconds: z.number(),
 });
 export type PlayerJoinedEvent = z.infer<typeof PlayerJoinedEvent>;
+
+const ShipType = z.enum([
+  "carrier",
+  "battleship",
+  "cruiser",
+  "submarine",
+  "destroyer",
+]);
+const Orientation = z.enum(["H", "V"]);
+
+export const PlaceShipsRequest = z.object({
+  player_id: z.string(),
+  ships: z.array(
+    z.object({
+      type: ShipType,
+      orientation: Orientation,
+      origin_col: z.number().int(),
+      origin_row: z.number().int(),
+    }),
+  ),
+});
+export type PlaceShipsRequest = z.infer<typeof PlaceShipsRequest>;
+
+export const ReadyRequest = z.object({
+  player_id: z.string(),
+});
+export type ReadyRequest = z.infer<typeof ReadyRequest>;
+
+export const OkResponse = z.object({
+  ok: z.literal(true),
+});
+export type OkResponse = z.infer<typeof OkResponse>;
+
+export const TimerTickEvent = z.object({
+  seconds_remaining: z.number(),
+});
+export type TimerTickEvent = z.infer<typeof TimerTickEvent>;
+
+export const PlayerReadyEvent = z.object({
+  player_id: z.string(),
+});
+export type PlayerReadyEvent = z.infer<typeof PlayerReadyEvent>;
+
+export const BattleStartEvent = z.object({
+  current_turn: z.string(),
+  timer_seconds: z.number(),
+});
+export type BattleStartEvent = z.infer<typeof BattleStartEvent>;
+
+export const PlacementExpiredEvent = z.object({});
+export type PlacementExpiredEvent = z.infer<typeof PlacementExpiredEvent>;

@@ -39,6 +39,14 @@ const joinStmt = db.prepare(
 )
 const deleteStmt = db.prepare("DELETE FROM games WHERE id = ? AND status = 'waiting'")
 const getStmt = db.prepare('SELECT * FROM games WHERE id = ?')
+const readyCreatorStmt = db.prepare('UPDATE games SET creator_ready = 1 WHERE id = ?')
+const readyJoinerStmt = db.prepare('UPDATE games SET joiner_ready = 1 WHERE id = ?')
+const startBattleStmt = db.prepare(
+  "UPDATE games SET status = 'battle', current_turn = ? WHERE id = ?",
+)
+const expirePlacementStmt = db.prepare(
+  "UPDATE games SET status = 'finished', winner_id = NULL WHERE id = ?",
+)
 
 export function createGame(creatorId: string, preset: Preset): CreateGameResponse {
   const id = randomUUID()
@@ -72,4 +80,20 @@ export function deleteGame(gameId: string): number {
 
 export function getGame(gameId: string): GameRow | null {
   return (getStmt.get(gameId) as GameRow | undefined) ?? null
+}
+
+export function markReady(gameId: string, isCreator: boolean): void {
+  if (isCreator) {
+    readyCreatorStmt.run(gameId)
+  } else {
+    readyJoinerStmt.run(gameId)
+  }
+}
+
+export function startBattle(gameId: string, firstTurn: string): void {
+  startBattleStmt.run(firstTurn, gameId)
+}
+
+export function expirePlacement(gameId: string): void {
+  expirePlacementStmt.run(gameId)
 }

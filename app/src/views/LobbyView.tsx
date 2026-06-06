@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { GetGamesResponse } from '@shared/schemas'
 import { Button } from '@/components/ui/button'
-import { ConflictError, createGame, deleteGame, getGames, joinGame } from '@/lib/api'
+import { ConflictError, createGame, deleteGame, joinGame } from '@/lib/api'
 import { useGameSSE } from '@/hooks/useGameSSE'
 import { useLobbySSE } from '@/hooks/useLobbySSE'
 import { CreateGameModal } from './lobby/CreateGameModal'
@@ -21,26 +21,17 @@ type LobbyViewProps = {
 }
 
 export function LobbyView({ playerId, onGameJoined }: LobbyViewProps) {
-  const [initialGames, setInitialGames] = useState<Game[]>([])
-  const games = useLobbySSE(initialGames)
+  const games = useLobbySSE()
   const [state, setState] = useState<LobbyState>({ phase: 'browsing' })
   const [modalOpen, setModalOpen] = useState(false)
 
-  useEffect(() => {
-    let active = true
-    void getGames().then((loaded) => {
-      if (active) setInitialGames(loaded)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
-
   const holdingGameId = state.phase === 'holding' ? state.gameId : null
-  useGameSSE(holdingGameId, () => {
-    if (state.phase === 'holding') {
-      onGameJoined(state.gameId, state.preset, 'creator')
-    }
+  useGameSSE(holdingGameId, {
+    onPlayerJoined: () => {
+      if (state.phase === 'holding') {
+        onGameJoined(state.gameId, state.preset, 'creator')
+      }
+    },
   })
 
   const handleCreate = (preset: Preset) => {

@@ -5,6 +5,7 @@ import {
   PlayerResponse,
 } from '@shared/schemas'
 import type { PlayerResponse as Player } from '@shared/schemas'
+import type { PlacedShip } from '@/views/placement/usePlacement'
 
 const API_BASE = 'http://localhost:8000'
 
@@ -70,6 +71,46 @@ export async function joinGame(
     preset: game.preset,
     creator_id: game.creator_id,
     joiner_id: game.joiner_id,
+  }
+}
+
+export async function placeShips(
+  gameId: string,
+  playerId: string,
+  ships: PlacedShip[],
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/games/${gameId}/place`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      player_id: playerId,
+      ships: ships.map((s) => ({
+        type: s.type,
+        orientation: s.orientation,
+        origin_col: s.origin_col,
+        origin_row: s.origin_row,
+      })),
+    }),
+  })
+  if (res.status === 409) {
+    throw new ConflictError()
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to place ships: ${String(res.status)}`)
+  }
+}
+
+export async function markReady(gameId: string, playerId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/games/${gameId}/ready`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ player_id: playerId }),
+  })
+  if (res.status === 409) {
+    throw new ConflictError()
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to mark ready: ${String(res.status)}`)
   }
 }
 
