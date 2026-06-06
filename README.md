@@ -51,17 +51,17 @@ I designed a [spec](./docs/spec.md) that anticipates where agents are likely to 
 
 - **[Schema as binding contract](./docs/spec.md#data-models).** Parallel agents can diverge on data shapes: one assumes a field exists, another never adds it. Defining every schema in the spec as a source of truth means there's no drift in what gets built or how it connects.
 - **[PR decomposition](./docs/spec.md#pr-plan).** Without a bounded scope, agents over-build and absorb work they weren't asked to do. Slicing the spec into explicit PRs before coding begins gives each agent a clear unit of work — one vertical slice of user value, never boilerplate detached from a requirement. Each PR builds on the last in dependency order, so there's nothing to coordinate and nothing to guess mid-development.
-- **UI [design system](./docs/battleship-design-system.md) and [mockup](./docs/battleship-ui-mockup.png).** Without a visual reference, frontend agents make independent styling decisions that produce an inconsistent UI. The design system defines every token, component, and screen layout; the annotated mockup is the source of truth for experience. Both are provided to agents upfront so there's no room for interpretation.
+- **UI [design system](./docs/battleship-design-system.md) and [mockup](./docs/battleship-ui-mockup.png).** Without a visual reference, frontend agents make independent styling decisions that produce an inconsistent UI. Both are provided to agents upfront so there's no room for interpretation.
 
 ### AI Harness
 
 I built a harness that includes instructions and guardrails so that agents can't drift from requirements and quality standards.
 
-- [**Claude Hooks**](./.claude/settings.json) — fire automatically after every file edit so issues are caught immediately rather than piling up until CI runs. Style and formatting problems are silently corrected in place; type errors are surfaced back to the agent as a hard block so it can fix them before moving on.
-- [**Pre-commit hook**](./.githooks/pre-commit) — fires on every `git commit` and runs lint, type-checking, and the full test suite on both frontend and server before the commit is allowed through. This ensures no broken or failing code ever enters the repo.
-- [**Test integrity rule**](./.githooks/pre-commit) — agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test. This rule is enforced using a pre-commit hook that surfaces staged changes to a committed test file and blocks the commit. The team-lead reviews the changes and makes a judgement call whether the code or the tests were broken. Lead signs-off (`ALLOW_TEST_CHANGES=1`) to proceed with changing test files, or push back to engineers to fix an actual code issue.
+- [**Claude Hooks**](./.claude/settings.json) — run after every file edit, before the agent moves on. Formatting is auto-corrected silently; type errors are surfaced as a hard block the agent must resolve before continuing.
+- [**Pre-commit hook**](./.githooks/pre-commit) — runs lint, type-checking, and the full test suite on every `git commit`. Broken or failing code cannot enter the repo.
+- [**Test integrity rule**](./.githooks/pre-commit) — agents may add new tests but may never modify or delete a committed test. A failing test means the code is wrong, not the test. The pre-commit hook blocks any staged change to a committed test file; only the Team Lead can sign off (`ALLOW_TEST_CHANGES=1`) after reviewing whether the test or the code was at fault.
 
-- **Instruction prompts** — loaded automatically at the start of every session so agents are never starting cold:
+- **Instruction prompts** 
   - [CLAUDE.md](./CLAUDE.md) — project-wide context: repo layout, tech stack, house style, conventions
   - [Team Lead](./.claude/agents/team-lead.md) — orchestrates agents, parallelizes work, owns commits and PRs, and is the final decision-maker on any cross-cutting call
   - [Backend Engineer](./.claude/agents/backend-engineer.md) — implements and reviews all server-side code: Express routes, SQLite schema, and repository layer
