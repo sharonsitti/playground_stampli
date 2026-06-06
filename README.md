@@ -1,8 +1,10 @@
-# Stampli Battleship Game
+# GenAI Battleship Game
 
 A two-player Battleship game built as a full-stack web app. Two players open the app in separate browser tabs, place their fleets, and take turns firing shots until one fleet is destroyed.
 
 The entire game was implemented by a team of autonomous AI agents working from a written spec without human supervision.
+
+![Battleship game in progress](./docs/battleship.png)
 
 ## What's included
 
