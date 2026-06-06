@@ -1,56 +1,86 @@
-# playground
+# Stampli Battleship Game
 
-A small full-stack app — **Express** (Node.js) backend + **React + Vite + TypeScript** frontend — set up for rapid, collaborative, pair-friendly development. The scaffold is deliberately minimal: each tool earns its place, nothing is added until it's needed.
+A two-player Battleship game built as a full-stack web app. Two players open the app in separate browser tabs, place their fleets, and take turns firing shots until one fleet is destroyed.
+
+The entire game was implemented by a team of autonomous AI agents working from a written spec, with no human writing application code or delegating work. 
 
 ## What's included
 
-- **Multiplayer Battleship game** — fully playable on localhost by two players in seperate browser tabs. Ships a complete UI (React + Tailwind), an Express backend, and a SQLite database. Built and tested by a team of autonomous agents.
+**Built by Agent Team:** 
 
+- **Multiplayer Battleship game** — fully playable on localhost by two players in separate browser tabs. Ships a complete UI (React + Tailwind), an Express backend, and a SQLite database.
+
+**Built by Sharon:**
+
+- **Specs** — the product and technical spec, UI design system, and visual mockup that served as the agents' source of truth. See [How the harness works](#how-the-harness-works) for details.
+
+- **Claude Code harness** — the agent instruction prompts, PostToolUse hooks, and pre-commit rules that made autonomous execution reliable. See [How the harness works](#how-the-harness-works) for details.
+
+## Quick start
+
+```bash
+make install   # run once: installs all deps and wires up the pre-commit hook
+make dev       # starts the frontend (port 3000) and backend (port 8000) in parallel
+make check     # runs lint, type-checking, and the full test suite on both sides
+```
+
+### Try it out
+
+The game requires two players, so you'll need two browser tabs.
+
+1. Open <http://localhost:3000> in two separate tabs
+2. Enter a name and click **Play** in each tab
+3. In one tab, click **Create Game** and pick a preset
+4. In the other tab, click **Join** on the game that appears
+5. Place your ships, click **I'm ready!**, and battle
+
+## My Approach
+
+Autonomous agent teams have known failure modes:
+
+- **Scope drift** — without clear boundaries, agents over-build or absorb work they weren't asked to do
+- **Coordination divergence** — teammates make incompatible assumptions and deliver the wrong outcome
+- **Code slop** — without enforced standards, agents produce code that passes but ignores style rules, type safety, and coding conventions
+
+My approach addresses these with two layers: 
+- **Spec driven development** structured to eliminate coordination ambiguity
+- **AI harness** that enforces quality guardlrails automatically. 
+
+Together, they replace human supervision.
+
+---
+
+### Spec Driven Development
+A good spec for autonomous teams anticipates where agents are likely to spiral, diverge, or backtrack and removes the ambiguity:
+
+- **Schema as binding contract.** Parallel agents can diverge on data shapes: one assumes a field exists, another never adds it. Defining every schema in the spec as a source of truth means there's no drift in what gets built or how it connects.
+- **PR decomposition.** Without a bounded scope, agents over-build and absorb work they weren't asked to do. Slicing the spec into explicit PRs before coding begins gives each agent a clear unit of work — one vertical slice of user value, never boilerplate detached from a requirement. Each PR builds on the last in dependency order, so there's nothing to coordinate and nothing to guess mid-development.
+
+### AI Harness
+
+Autonomous agents produce good work when squeezed from two directions: instructions tell them what to build and why; guardrails ensure they can't stray too far while doing it.
+
+**Deterministic guardrails** 
+- **PostToolUse hooks** — fire automatically after every file edit so issues are caught immediately rather than piling up until CI runs. Style and formatting problems are silently corrected in place; type errors are surfaced back to the agent as a hard block so it can fix them before moving on:
+  - [`frontend-check.sh`](./.claude/hooks/frontend-check.sh) — covers frontend source files
+  - [`server-check.sh`](./.claude/hooks/server-check.sh) — covers server source files
+- **Pre-commit hook** ([`.githooks/pre-commit`](./.githooks/pre-commit)) — fires on every `git commit` and runs lint, type-checking, and the full test suite on both frontend and server before the commit is allowed through. This ensures no broken or failing code ever enters the repo.
+- **Test integrity rule** — agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test. This rule is enforced using a pre-commit hook that surfaces staged changes to a committed test file and blocks the commit. The team-lead reviews the changes and makes a judgement call whether the code or the tests were broken. Lead signs-off (`ALLOW_TEST_CHANGES=1`) to proceed with changing test files, or push back to engineers to fix an actual code issue.
+
+**Non-deterministic compass** 
 - **Specs** — the source of truth the agents worked from, and where most of the human judgment in this project was concentrated:
   - [`docs/spec.md`](./docs/spec.md) — requirements, data models, API contracts, key user flows, design decisions, and PR slicing
   - [`docs/battleship-design-system.md`](./docs/battleship-design-system.md) — color tokens, typography, component specs, and per-screen layout for every UI state
   - [`docs/battleship-ui-mockup.png`](./docs/battleship-ui-mockup.png) — annotated visual reference; the screenshot is the source of truth for UI and experience
+- **Instruction prompts** — loaded automatically at the start of every session so agents are never starting cold:
+  - [`CLAUDE.md`](./CLAUDE.md) — project-wide context: repo layout, tech stack, house style, conventions
+  - [`.claude/agents/team-lead.md`](./.claude/agents/team-lead.md) — orchestrates agents, parallelizes work, owns commits and PRs, and is the final decision-maker on any cross-cutting call
+  - [`.claude/agents/backend-engineer.md`](./.claude/agents/backend-engineer.md) — implements and reviews all server-side code: Express routes, SQLite schema, and repository layer
+  - [`.claude/agents/frontend-engineer.md`](./.claude/agents/frontend-engineer.md) — implements and reviews all client-side code: React components, state management, and Tailwind styling
+  - [`.claude/agents/product-manager.md`](./.claude/agents/product-manager.md) — guards scope, validates delivery against the spec's acceptance criteria, and blocks sign-off when requirements aren't fully met
+  - [`.claude/agents/qa-engineer.md`](./.claude/agents/qa-engineer.md) — writes tests derived from the spec and user flows, not the implementation, to ensure the suite enforces the product contract
+  - [`.claude/agents/security-engineer.md`](./.claude/agents/security-engineer.md) — reviews PRs for OWASP Top 10 vulnerabilities, SQL injection, XSS, and input validation gaps across the full stack
 
-- **A Claude Code harness** — the scaffolding that made autonomous team execution reliable. 
-  - **Instruction prompts** — loaded automatically at the start of every session so agents are never starting cold:
-    - [`CLAUDE.md`](./CLAUDE.md) — project-wide context: repo layout, tech stack, house style, conventions
-    - [`.claude/agents/team-lead.md`](./.claude/agents/team-lead.md) — orchestrates agents, parallelizes work, owns commits and PRs, and is the final decision-maker on any cross-cutting call
-    - [`.claude/agents/backend-engineer.md`](./.claude/agents/backend-engineer.md) — implements and reviews all server-side code: Express routes, SQLite schema, and repository layer
-    - [`.claude/agents/frontend-engineer.md`](./.claude/agents/frontend-engineer.md) — implements and reviews all client-side code: React components, state management, and Tailwind styling
-    - [`.claude/agents/product-manager.md`](./.claude/agents/product-manager.md) — guards scope, validates delivery against the spec's acceptance criteria, and blocks sign-off when requirements aren't fully met
-    - [`.claude/agents/qa-engineer.md`](./.claude/agents/qa-engineer.md) — writes tests derived from the spec and user flows, not the implementation, to ensure the suite enforces the product contract
-    - [`.claude/agents/security-engineer.md`](./.claude/agents/security-engineer.md) — reviews PRs for OWASP Top 10 vulnerabilities, SQL injection, XSS, and input validation gaps across the full stack
-  - **PostToolUse hooks** — fire automatically after every file edit, keeping the working tree clean turn-by-turn:
-    - [`frontend-check.sh`](./.claude/hooks/frontend-check.sh) — on any `.ts`/`.tsx`/`.css` change under `app/`: auto-fixes lint and format, then blocks and surfaces TypeScript errors to the agent immediately
-    - [`server-check.sh`](./.claude/hooks/server-check.sh) — on any `.ts` change under `server/`: same auto-fix and block pattern
-  - **Pre-commit hook** ([`.githooks/pre-commit`](./.githooks/pre-commit)) — fires on every `git commit` and runs lint, type-checking, and the full test suite on both frontend and server before the commit is allowed through. This ensures no broken or failing code ever enters the repo.
-  - **Test integrity rule** —  agents may write new tests but may never modify or delete an existing committed test. If a test fails, the code is wrong — not the test. This rule is enforced using a pre-commit hook that surfaces staged changes to a committed test file and blocks the commit. The team-lead reviews the changes and makes a judgement call whether the it's the code or the tests were broken. Lead signs-off (`ALLOW_TEST_CHANGES=1`) to proceed with changing test files, or push back to engineers to fix an actual code issue. 
-
-## Quick start
-
-You'll need Node 22+.
-
-```bash
-make install   # install all deps + wire up the pre-commit hook (run once)
-make dev       # start both servers in parallel
-```
-
-- Frontend: <http://localhost:3000>
-- Backend API: <http://localhost:8000>
-
-## How the harness works
-
-The repo is set up to stay productive whether a human or [Claude Code](https://docs.claude.com/en/docs/agents-and-tools/claude-code) is at the keyboard. The pieces:
-
-- **[`docs/`](./docs/)** — used for Spec Driven Development. Features, product context and goals, and high level design are derived from here. Write the spec first; everything else follows from it.
-- **[`CLAUDE.md`](./CLAUDE.md) files** — load project context automatically at the start of every Claude session, so Claude isn't starting cold. Kept close to the code they describe.
-- **[`.claude/settings.json`](./.claude/settings.json)** — controls what Claude is allowed to do autonomously without prompting. Tuned to reduce friction for routine tasks while keeping destructive actions gated.
-- **[`.claude/hooks/`](./.claude/hooks/)** — auto-fix lint and format on every file Claude touches, and surface type errors immediately. Keeps the working tree clean turn-by-turn instead of letting issues pile up until CI runs.
-- **[`.claude/skills/`](./.claude/skills/)** — project-local workflows for common tasks (e.g. writing contract-driven tests). Encodes the right process so it doesn't need to be re-explained each session.
-- **[`.githooks/`](./.githooks/)** — pre-commit hook that runs `make check` before every commit, and enforces a hard rule: **agents may write new tests but may never modify or delete an existing committed test — if a test fails, the code is wrong, not the test.** If committed test files appear in the staged diff, the hook blocks and prints the affected files. The team-lead reviews the diff and re-runs with `ALLOW_TEST_CHANGES=1 git commit ...` only when the change is a legitimate, spec-driven update. New test files pass through silently. `make install` wires the hook up automatically.
-- **[`.github/workflows/`](./.github/workflows/)** — CI that mirrors local checks exactly. No surprises between local and remote.
-
-Everything in the harness is designed around the same minimalism as the codebase: keep what earns its keep, fail fast on real bugs, stay out of the way the rest of the time.
 
 ## Test coverage
 
